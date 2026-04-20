@@ -154,6 +154,7 @@ The following milestones are planned for implementation. Note that some tracks (
 
 - [ ] **SvelteKit Setup:** Initialize SvelteKit project with Tailwind and shadcn-svelte. (No dependencies)
 - [x] **Security & Compliance Guide:** Formalize "Iron-Clad" mandates and trade-offs. (Completed)
+- [ ] **Node Automation Scripts:** Implement `install.sh`, `run.sh`, `dev.sh`, and `reset-db.sh`. (No dependencies)
 - [ ] **Data Seeding:** Implement `db:seed:essential` (roles/super-user) and `db:seed:demo` (multi-tenant sample data). (Depends on: SvelteKit Setup)
 - [ ] **Frontend Foundation:** Implement "Control Room" design system components. (Depends on: SvelteKit Setup)
 - [ ] **JWT Secret Management:** Implement AES-GCM encryption and S3 storage/recovery logic. (Depends on: SvelteKit Setup)

@@ -1,75 +1,90 @@
 <script lang="ts">
-  import { Plus, MessageSquare } from 'lucide-svelte';
-  import { setContext } from 'svelte';
-  
-  let { children } = $props();
+	import { Plus, MessageSquare } from 'lucide-svelte';
+	import { setContext } from 'svelte';
 
-  const mockHistory = [
-    { id: 1, title: 'Asian Revenue Trends', date: 'Today' },
-    { id: 2, title: 'SOC2 Audit Checklist', date: 'Yesterday' },
-    { id: 3, title: 'Personnel Field Logistics', date: '2 days ago' }
-  ];
+	let { children } = $props();
 
-  let isHistoryOpen = $state(false);
+	const mockHistory = [
+		{ id: 1, title: 'Asian Revenue Trends', date: 'Today' },
+		{ id: 2, title: 'SOC2 Audit Checklist', date: 'Yesterday' },
+		{ id: 3, title: 'Personnel Field Logistics', date: '2 days ago' }
+	];
 
-  // Provide state to children
-  setContext('chatHistory', {
-    isOpen: () => isHistoryOpen,
-    toggle: () => isHistoryOpen = !isHistoryOpen,
-    close: () => isHistoryOpen = false
-  });
+	let isHistoryOpen = $state(false);
+
+	// Provide state to children
+	setContext('chatHistory', {
+		isOpen: () => isHistoryOpen,
+		toggle: () => (isHistoryOpen = !isHistoryOpen),
+		close: () => (isHistoryOpen = false)
+	});
 </script>
 
-<div class="flex h-full w-full overflow-hidden bg-background"> 
-  <!-- Backdrop for mobile history -->
-  {#if isHistoryOpen}
-    <button 
-      onclick={() => isHistoryOpen = false}
-      class="fixed inset-0 bg-background/40 backdrop-blur-sm z-10 lg:hidden"
-      aria-label="Close history sidebar"
-    ></button>
-  {/if}
+<div class="flex h-full w-full overflow-hidden bg-background">
+	<!-- Backdrop for mobile history -->
+	{#if isHistoryOpen}
+		<button
+			onclick={() => (isHistoryOpen = false)}
+			class="fixed inset-0 z-10 bg-background/40 backdrop-blur-sm lg:hidden"
+			aria-label="Close history sidebar"
+		></button>
+	{/if}
 
-  <!-- History Sidebar (Nested) -->
-  <aside class="
-    fixed inset-y-0 left-0 z-20 w-64 border-r border-border flex flex-col bg-background lg:bg-muted/20 transition-transform duration-300
-    lg:relative lg:translate-x-0
+	<!-- History Sidebar (Nested) -->
+	<aside
+		class="
+    fixed inset-y-0 left-0 z-20 flex w-64 flex-col border-r border-border bg-background transition-transform duration-300 lg:relative
+    lg:translate-x-0 lg:bg-muted/20
     {isHistoryOpen ? 'translate-x-0' : '-translate-x-full'}
-  ">
-    <div class="p-4 border-b border-border flex justify-between items-center bg-muted/40">
-      <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Intelligence History</span>
-      <button class="p-1 hover:bg-muted rounded-sm transition-colors lg:hidden" onclick={() => isHistoryOpen = false}><Plus size={14} class="rotate-45" /></button>
-    </div>
-    <div class="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-      {#each mockHistory as chat}
-        <button class="w-full text-left p-2 rounded-sm text-[11px] group transition-all
-          {chat.id === 1 ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}"
-        >
-          <div class="flex items-center gap-2">
-            <MessageSquare size={12} class={chat.id === 1 ? 'text-signal-blue' : 'group-hover:text-signal-blue transition-colors'} />
-            <span class="truncate">{chat.title}</span>
-          </div>
-          <span class="text-[9px] text-muted-foreground/50 ml-5 block mt-0.5">{chat.date}</span>
-        </button>
-      {/each}
-    </div>
-  </aside>
+  "
+	>
+		<div class="flex items-center justify-between border-b border-border bg-muted/40 p-4">
+			<span class="text-[10px] font-bold tracking-widest text-muted-foreground uppercase"
+				>Intelligence History</span
+			>
+			<button
+				class="rounded-sm p-1 transition-colors hover:bg-muted lg:hidden"
+				onclick={() => (isHistoryOpen = false)}><Plus size={14} class="rotate-45" /></button
+			>
+		</div>
+		<div class="custom-scrollbar flex-1 space-y-1 overflow-y-auto p-2">
+			{#each mockHistory as chat (chat.id)}
+				<button
+					class="group w-full rounded-sm p-2 text-left text-[11px] transition-all
+          {chat.id === 1
+						? 'bg-muted text-foreground'
+						: 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}"
+				>
+					<div class="flex items-center gap-2">
+						<MessageSquare
+							size={12}
+							class={chat.id === 1
+								? 'text-signal-blue'
+								: 'transition-colors group-hover:text-signal-blue'}
+						/>
+						<span class="truncate">{chat.title}</span>
+					</div>
+					<span class="mt-0.5 ml-5 block text-[9px] text-muted-foreground/50">{chat.date}</span>
+				</button>
+			{/each}
+		</div>
+	</aside>
 
-  <!-- Main Chat Content -->
-  <main class="flex-1 flex flex-col relative bg-background/50">
-    {@render children()}
-  </main>
+	<!-- Main Chat Content -->
+	<main class="relative flex flex-1 flex-col bg-background/50">
+		{@render children()}
+	</main>
 </div>
 
 <style>
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: var(--color-border);
-    border-radius: 2px;
-  }
+	.custom-scrollbar::-webkit-scrollbar {
+		width: 4px;
+	}
+	.custom-scrollbar::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	.custom-scrollbar::-webkit-scrollbar-thumb {
+		background: var(--color-border);
+		border-radius: 2px;
+	}
 </style>

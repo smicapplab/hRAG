@@ -37,6 +37,7 @@ export const actions = {
         const token = await new SignJWT({ 
             sub: user.id, 
             email: user.email, 
+            name: user.name,
             isAdmin: user.isAdmin, 
             isCompliance: user.isCompliance 
         })

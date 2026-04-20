@@ -1,8 +1,14 @@
 <script lang="ts">
-  import { MessageSquare, Search, FileText, Users, Activity, Shield, Settings, Bot } from 'lucide-svelte';
+  import { MessageSquare, Search, FileText, Users, Activity, Shield, Settings, Bot, LogOut } from 'lucide-svelte';
   import { page } from '$app/state';
 
-  let { nodeName = 'node-01', isPrimary = true } = $props();
+  let { 
+    nodeName = 'node-01', 
+    isPrimary = true, 
+    user = { name: 'Super User', email: 'admin@hrag.local' },
+    isOpen = true,
+    onClose = () => {}
+  } = $props();
 
   const navItems = [
     {
@@ -34,7 +40,20 @@
   }
 </script>
 
-<aside class="w-64 h-full border-r border-border bg-background flex flex-col shrink-0">
+<!-- Backdrop for mobile -->
+{#if isOpen}
+  <button 
+    onclick={onClose}
+    class="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"
+    aria-label="Close sidebar"
+  ></button>
+{/if}
+
+<aside class="
+  fixed inset-y-0 left-0 z-50 w-64 border-r border-border bg-background flex flex-col shrink-0 transition-transform duration-300
+  lg:relative lg:translate-x-0
+  {isOpen ? 'translate-x-0' : '-translate-x-full'}
+">
   <!-- Brand -->
   <div class="p-4 border-b border-border flex items-center gap-2">
     <div class="w-6 h-6 bg-signal-blue rounded-sm flex items-center justify-center">
@@ -55,7 +74,7 @@
                 class="flex items-center gap-3 p-2 rounded-sm text-sm transition-all group
                 {isActive(item.href) ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}"
               >
-                <item.icon size={16} class="{isActive(item.href) ? 'text-signal-blue' : 'group-hover:text-signal-blue transition-colors'}" />
+                <item.icon size={16} class={isActive(item.href) ? 'text-signal-blue' : 'group-hover:text-signal-blue transition-colors'} />
                 <span>{item.label}</span>
               </a>
             </li>
@@ -82,13 +101,18 @@
   <!-- User Profile -->
   <div class="p-4 border-t border-border bg-muted/50">
     <div class="flex items-center gap-3">
-      <div class="w-8 h-8 rounded-sm bg-muted flex items-center justify-center text-xs font-bold border border-border">
-        SU
+      <div class="w-8 h-8 rounded-sm bg-muted flex items-center justify-center text-xs font-bold border border-border uppercase">
+        {user.name.split(' ').map((n: string) => n[0]).join('')}
       </div>
       <div class="flex-1 min-w-0">
-        <p class="text-xs font-bold text-foreground truncate leading-none">Super User</p>
-        <p class="text-[10px] text-muted-foreground truncate mt-1">admin@hrag.local</p>
+        <p class="text-xs font-bold text-foreground truncate leading-none">{user.name}</p>
+        <p class="text-[10px] text-muted-foreground truncate mt-1">{user.email}</p>
       </div>
+      <form method="POST" action="/login?/logout">
+        <button type="submit" class="p-1.5 text-muted-foreground hover:text-signal-red transition-colors rounded-sm hover:bg-muted group" title="Logout">
+          <LogOut size={14} />
+        </button>
+      </form>
     </div>
   </div>
 </aside>

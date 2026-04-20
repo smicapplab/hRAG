@@ -34,7 +34,7 @@
   }
 </script>
 
-<div class="space-y-6 h-full flex flex-col overflow-hidden">
+<div class="p-4 lg:p-8 space-y-6 h-full flex flex-col overflow-hidden">
   <!-- Header -->
   <div class="flex items-center justify-between">
     <div>

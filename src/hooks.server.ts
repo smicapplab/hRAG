@@ -69,6 +69,7 @@ export const handle: Handle = async ({ event, resolve }) => {
             event.locals.user = {
                 id: payload.sub as string,
                 email: payload.email as string,
+                name: payload.name as string,
                 isAdmin: payload.isAdmin as boolean,
                 isCompliance: payload.isCompliance as boolean
             };

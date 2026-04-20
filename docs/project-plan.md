@@ -19,7 +19,7 @@
 | :--- | :--- | :--- |
 | **Framework** | **SvelteKit** | Unified API Server (Server Routes) and Frontend. |
 | **Ingestion Engine** | **SvelteKit (LangChain JS)** | Text extraction, chunking, and WASM-based OCR. |
-| **Frontend** | **Svelte 5 / shadcn-svelte** | High-performance reactive UI with Radix-based components. |
+| **Frontend** | **Svelte 5 / shadcn-svelte** | High-performance reactive UI with Bits UI-based components. |
 | **Metadata** | **Drizzle ORM** | **SQLite** (Single-file) or **Postgres** (Enterprise). |
 | **Vector Engine** | **VectorStore Interface** | Abstract interface supporting **LanceDB** (default) and **Qdrant**. |
 | **Storage** | **Garage S3** | Lightweight Rust binary for replicated object storage. |
@@ -69,7 +69,10 @@ Every hRAG compute node follows this sequence on boot to ensure state recovery a
     *   **WARNING:** Single-node Garage has **ZERO replication**. Data loss will occur if the physical disk fails.
 2.  **Run hRAG:** The `install.sh` script prompts for:
     *   **Master Passphrase** (for secret encryption).
-    *   **Embedding Provider** (Ollama, OpenAI, Gemini, or Anthropic).
+    *   **Embedding Provider**:
+        *   **Local Transformers** (In-process, air-gapped).
+        *   **Ollama** (Local GPU-accelerated sidecar).
+        *   **Cloud** (OpenAI, Gemini, or Anthropic).
     *   **Database Mode** (SQLite vs Postgres).
 3.  **Nginx:** Proxy traffic from port 80/443 to the app port (default: 3000).
 
@@ -114,7 +117,7 @@ To keep the UI responsive, ingestion is handled via an internal async queue.
 2.  **Processing:** 
     *   **Extraction & OCR:** Pure JS normalization. OCR is triggered automatically if the PDF contains no text.
     *   **Chunking:** Recursive character splitting. Defaults: **512 tokens / 64 overlap**.
-    *   **Embedding:** Sent to the selected provider (Ollama, OpenAI, Gemini, or Anthropic).
+    *   **Embedding:** Sent to the selected provider (Local Transformers, Ollama, OpenAI, Gemini, or Anthropic).
 3.  **Indexing:** Chunks are written to the `VectorStore` (LanceDB on S3) and metadata to Drizzle.
 4.  **Failure Contract:** 3 retries with backoff, Dead-Letter S3 bucket, and UI error visibility.
 
@@ -150,14 +153,17 @@ The UI targets a dense, industrial aesthetic optimized for infrastructure monito
 The following milestones are planned for implementation. Note that some tracks (Frontend vs Vector) can proceed in parallel once the SvelteKit project is initialized.
 
 - [ ] **SvelteKit Setup:** Initialize SvelteKit project with Tailwind and shadcn-svelte. (No dependencies)
+- [x] **Security & Compliance Guide:** Formalize "Iron-Clad" mandates and trade-offs. (Completed)
 - [ ] **Data Seeding:** Implement `db:seed:essential` (roles/super-user) and `db:seed:demo` (multi-tenant sample data). (Depends on: SvelteKit Setup)
 - [ ] **Frontend Foundation:** Implement "Control Room" design system components. (Depends on: SvelteKit Setup)
 - [ ] **JWT Secret Management:** Implement AES-GCM encryption and S3 storage/recovery logic. (Depends on: SvelteKit Setup)
 - [ ] **Vector Abstraction:** Define `VectorStore` interface and LanceDB/S3 provider. (No dependencies)
 - [ ] **SQLite/Litestream Integration:** Automate Litestream sidecar and restore logic. (Depends on: SvelteKit Setup)
-- [ ] **Ingestion Pipeline:** Pure Node extraction (WASM OCR), queue (Worker Threads vs BullMQ), and embedding (Ollama/OpenAI/Gemini/Anthropic). (Depends on: Vector Abstraction, SvelteKit Setup)
+- [ ] **Ingestion Pipeline:** Pure Node extraction (WASM OCR), queue (Worker Threads vs BullMQ), and embedding (Local/Ollama/OpenAI/Gemini/Anthropic). (Depends on: Vector Abstraction, SvelteKit Setup)
+- [ ] **External Metadata Sync API:** REST endpoints for the "Power User Sidecar" to push externally processed document metadata. (Depends on: Ingestion Pipeline)
+- [ ] **Audit Log Ingestion API:** REST endpoints for external agents to report activities for centralized auditing. (Depends on: Health Endpoint)
 - [ ] **Health Endpoint:** Monitor Garage, LanceDB, and Litestream lag. (Depends on: SQLite Integration)
 - [ ] **Nginx Config Templating:** Automate SSL and upstream blocks. (Depends on: SvelteKit Setup)
 - [ ] **Upgrade Strategy:** `hrag update` with Drizzle migrations. (Depends on: SvelteKit Setup)
 - [ ] **Single-Node Warning:** Add a UI banner/alert for non-replicated storage. (Depends on: Frontend Foundation)
-- [ ] **The Bridge:** Finalize `install.sh` with configuration prompts. (Depends on: All above)
+- [ ] **The Bridge:** Finalize `install.sh` with configuration prompts for the master passphrase, embedding provider (Local, Ollama, Cloud), and database mode. (Depends on: All above)

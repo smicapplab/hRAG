@@ -10,6 +10,7 @@ node_modules
 
 # OS
 .DS_Store
+**/.DS_Store
 Thumbs.db
 
 # Env
@@ -18,8 +19,26 @@ Thumbs.db
 !.env.example
 !.env.test
 
+# Local Storage & Infrastructure (hRAG Specific)
+.garage/
+.mock-s3/
+s3.log
+local.db*
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
 # SQLite
 *.db
+*.db-shm
+*.db-wal
+
+# Git Worktrees
+.worktrees/

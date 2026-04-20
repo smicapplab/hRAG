@@ -65,9 +65,9 @@ export class LanceDBVectorStore implements VectorStore {
             'r:global'
         ];
 
-        // Construct SQL filter (ANY_IN simulation for LanceDB)
-        const tokenStr = tokens.map(t => `'${t}'`).join(', ');
-        const whereClause = `(owner_id = '${filter.userId}') OR (array_contains(access_ids, [${tokenStr}]))`;
+        // Construct SQL filter (membership check for LanceDB)
+        const tokenClauses = tokens.map(t => `array_has(access_ids, '${t}')`).join(' OR ');
+        const whereClause = `(owner_id = '${filter.userId}') OR (${tokenClauses})`;
 
         const results = await table
             .search(vector)

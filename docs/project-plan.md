@@ -157,7 +157,7 @@ The following milestones are planned for implementation. Note that some tracks (
 - [ ] **Node Automation Scripts:** Implement `install.sh`, `run.sh`, `dev.sh`, and `reset-db.sh`. (No dependencies)
 - [ ] **Data Seeding:** Implement `db:seed:essential` (roles/super-user) and `db:seed:demo` (multi-tenant sample data). (Depends on: SvelteKit Setup)
 - [ ] **Frontend Foundation:** Implement "Control Room" design system components. (Depends on: SvelteKit Setup)
-- [ ] **JWT Secret Management:** Implement AES-GCM encryption and S3 storage/recovery logic. (Depends on: SvelteKit Setup)
+- [x] **JWT Secret Management:** Implement AES-GCM encryption and S3 storage/recovery logic. (Completed)
 - [ ] **Vector Abstraction:** Define `VectorStore` interface and LanceDB/S3 provider. (No dependencies)
 - [ ] **SQLite/Litestream Integration:** Automate Litestream sidecar and restore logic. (Depends on: SvelteKit Setup)
 - [ ] **Ingestion Pipeline:** Pure Node extraction (WASM OCR), queue (Worker Threads vs BullMQ), and embedding (Local/Ollama/OpenAI/Gemini/Anthropic). (Depends on: Vector Abstraction, SvelteKit Setup)

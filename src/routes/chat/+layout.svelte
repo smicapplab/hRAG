@@ -26,6 +26,7 @@
     <button 
       onclick={() => isHistoryOpen = false}
       class="fixed inset-0 bg-background/40 backdrop-blur-sm z-10 lg:hidden"
+      aria-label="Close history sidebar"
     ></button>
   {/if}
 

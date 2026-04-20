@@ -10,6 +10,7 @@ node_modules
 
 # OS
 .DS_Store
+**/.DS_Store
 Thumbs.db
 
 # Env
@@ -21,5 +22,21 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# IDEs
+.vscode/
+.idea/
+
+# hRAG State
+.garage/
+lancedb/
+bin/
+.mock-s3/
+
 # SQLite
 *.db
+*.db-shm
+*.db-wal
+
+# Git Worktrees
+.worktrees/

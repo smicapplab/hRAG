@@ -39,4 +39,26 @@ describe('LanceDB Security Isolation', () => {
         expect(res3.some(r => r.docId === 'doc-a')).toBe(true);
         expect(res3.some(r => r.docId === 'doc-b')).toBe(false);
     });
+
+    it('should allow anyone to see documents with r:global', async () => {
+        const v1 = new Array(384).fill(0.1);
+        
+        // Doc Global: Public document
+        await store.addDocument('doc-global', [{ text: 'Public Info', vector: v1 }], 'admin', ['r:global']);
+        
+        // Random user search: Should see Doc Global
+        const res = await store.search(v1, { userId: 'random-user', groupIds: [] });
+        expect(res.some(r => r.docId === 'doc-global')).toBe(true);
+    });
+
+    it('should handle single quotes in IDs (SQL injection prevention)', async () => {
+        const v1 = new Array(384).fill(0.1);
+        const maliciousId = "user' OR '1'='1";
+        
+        // This should not throw and should escape properly
+        await store.addDocument("doc'1", [{ text: 'Secret 1', vector: v1 }], maliciousId, ["g'group"]);
+        
+        const res = await store.search(v1, { userId: maliciousId, groupIds: ["g'group"] });
+        expect(res.some(r => r.docId === "doc'1")).toBe(true);
+    });
 });

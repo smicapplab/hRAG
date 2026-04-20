@@ -3,17 +3,24 @@ import type { VectorStore, SearchResult } from './interfaces';
 
 export class LanceDBVectorStore implements VectorStore {
     private dbPromise: Promise<lancedb.Connection>;
+    private table: lancedb.Table | null = null;
     private readonly tableName = 'chunks';
 
     constructor(uri: string) {
         this.dbPromise = lancedb.connect(uri);
     }
 
+    private escape(val: string): string {
+        return val.replace(/'/g, "''");
+    }
+
     private async getTable() {
+        if (this.table) return this.table;
         const db = await this.dbPromise;
         const tables = await db.tableNames();
         if (tables.includes(this.tableName)) {
-            return db.openTable(this.tableName);
+            this.table = await db.openTable(this.tableName);
+            return this.table;
         }
         // Initial schema creation happens on first add
         return null;
@@ -32,16 +39,17 @@ export class LanceDBVectorStore implements VectorStore {
 
         let table = await this.getTable();
         if (table) {
-            await table.delete(`doc_id = '${docId}'`);
+            await table.delete(`doc_id = '${this.escape(docId)}'`);
             await table.add(data);
         } else {
-            await db.createTable(this.tableName, data);
+            this.table = await db.createTable(this.tableName, data);
+            await this.table.createIndex('owner_id');
         }
     }
 
     async deleteDocument(docId: string) {
         const table = await this.getTable();
-        if (table) await table.delete(`doc_id = '${docId}'`);
+        if (table) await table.delete(`doc_id = '${this.escape(docId)}'`);
     }
 
     async updateAccess(docId: string, accessIds: string[]) {
@@ -50,7 +58,7 @@ export class LanceDBVectorStore implements VectorStore {
             // Update the access_ids for all chunks belonging to this document.
             // Note: Native update is available in LanceDB Node.js SDK.
             // Using a cast to any to avoid type issues with array updates in some versions of the SDK.
-            await table.update({ access_ids: accessIds as any }, { where: `doc_id = '${docId}'` });
+            await table.update({ access_ids: accessIds as any }, { where: `doc_id = '${this.escape(docId)}'` });
         }
     }
 
@@ -60,14 +68,14 @@ export class LanceDBVectorStore implements VectorStore {
 
         // Dynamic token generation: u:id, g:id, r:global
         const tokens = [
-            `u:${filter.userId}`,
-            ...filter.groupIds.map(id => `g:${id}`),
+            `u:${this.escape(filter.userId)}`,
+            ...filter.groupIds.map(id => `g:${this.escape(id)}`),
             'r:global'
         ];
 
         // Construct SQL filter (membership check for LanceDB)
         const tokenClauses = tokens.map(t => `array_has(access_ids, '${t}')`).join(' OR ');
-        const whereClause = `(owner_id = '${filter.userId}') OR (${tokenClauses})`;
+        const whereClause = `(owner_id = '${this.escape(filter.userId)}') OR (${tokenClauses})`;
 
         const results = await table
             .search(vector)

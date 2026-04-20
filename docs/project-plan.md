@@ -152,10 +152,10 @@ The UI targets a dense, industrial aesthetic optimized for infrastructure monito
 ## 11. Development Milestones
 The following milestones are planned for implementation. Note that some tracks (Frontend vs Vector) can proceed in parallel once the SvelteKit project is initialized.
 
-- [ ] **SvelteKit Setup:** Initialize SvelteKit project with Tailwind and shadcn-svelte. (No dependencies)
+- [x] **SvelteKit Setup:** Initialize SvelteKit project with Tailwind and shadcn-svelte. (No dependencies)
 - [x] **Security & Compliance Guide:** Formalize "Iron-Clad" mandates and trade-offs. (Completed)
-- [ ] **Node Automation Scripts:** Implement `install.sh`, `run.sh`, `dev.sh`, and `reset-db.sh`. (No dependencies)
-- [ ] **Data Seeding:** Implement `db:seed:essential` (roles/super-user) and `db:seed:demo` (multi-tenant sample data). (Depends on: SvelteKit Setup)
+- [x] **Node Automation Scripts:** Implement `install.sh`, `run.sh`, `dev.sh`, and `reset-db.sh`. (No dependencies)
+- [x] **Data Seeding:** Implement `db:seed:essential` (roles/super-user) and `db:seed:demo` (multi-tenant sample data). (Depends on: SvelteKit Setup)
 - [ ] **Frontend Foundation:** Implement "Control Room" design system components. (Depends on: SvelteKit Setup)
 - [x] **JWT Secret Management:** Implement AES-GCM encryption and S3 storage/recovery logic. (Completed)
 - [ ] **Vector Abstraction:** Define `VectorStore` interface and LanceDB/S3 provider. (No dependencies)

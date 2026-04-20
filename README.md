@@ -5,11 +5,19 @@ hRAG is a unified document intelligence platform designed for stateless horizont
 ## Purpose
 The project aims to provide a high-performance, S3-native RAG (Retrieval-Augmented Generation) system that remains "stateless at the compute layer." This allows compute nodes to be ephemeral and easily replicated without data loss, as the entire state is persisted in or replicated to the S3 storage tier.
 
+## Documentation
+Detailed specifications and guides for the hRAG platform:
+*   **[Project Plan](./docs/project-plan.md)**: Development milestones, tech stack, and roadmap.
+*   **[Architecture Spec](./docs/architecture.md)**: System topography, data flows, and runtime rationale.
+*   **[Security & Compliance](./docs/security.md)**: Iron-Clad mandates, secret management, and GDPR/SOC2/HIPAA mapping.
+*   **[UI Specification](./docs/ui-specs.md)**: "Control Room" design tokens and static interface mockups.
+
 ## Core Philosophy
+
 * **Stateless Compute:** All identity, metadata, and vector state resides in the storage tier.
 * **S3-Native:** LanceDB fragments and SQLite snapshots are stored directly in Garage S3.
 * **Single Runtime:** Built exclusively on SvelteKit (Node.js/TypeScript) to ensure portability, minimal bundle size, and zero-config deployment.
-* **Flexible Embeddings:** Supports local embedding models (via Ollama or local transformers) and cloud-based providers (OpenAI, Gemini, Anthropic).
+* **Flexible Embeddings:** Supports **fully air-gapped** local inference (@xenova/transformers), GPU-accelerated local sidecars (Ollama), and cloud-based providers (OpenAI, Gemini, Anthropic).
 * **No-Docker Mandate:** Designed to run as high-performance binaries or standard environments without requiring containerization.
 * **Industrial Interface:** A dense, dark-themed "Control Room" aesthetic optimized for technical data density.
 
@@ -65,7 +73,7 @@ To keep the API responsive, ingestion is handled via an internal async queue.
     *   **WARNING:** Single-node Garage has **ZERO replication**. Data loss will occur if the physical disk fails.
 2.  Execute `install.sh` to configure:
     *   **Master Passphrase** (for secret encryption).
-    *   **Embedding Provider** (Ollama, OpenAI, Gemini, or Anthropic).
+    *   **Embedding Provider** (Local Transformers, Ollama, OpenAI, Gemini, or Anthropic).
     *   **Database Mode** (SQLite vs Postgres).
 3.  Start the hRAG server.
 
@@ -88,13 +96,17 @@ To keep the API responsive, ingestion is handled via an internal async queue.
 ## Development Milestones
 The following milestones are planned for implementation. Tracks such as Frontend Foundation and Vector Abstraction can proceed in parallel once the SvelteKit project is initialized.
 
+* [x] **Security & Compliance Guide:** Formalize "Iron-Clad" mandates and trade-offs. (Completed)
+* [x] **Node Automation Scripts:** Implement `install.sh`, `run.sh`, `dev.sh`, and `reset-db.sh`. (Completed)
 * [ ] **SvelteKit Setup:** Initialization of the project with Tailwind and shadcn-svelte.
-* [ ] **Data Seeding:** Implementation of essential and demo seeds for multi-tenant verification.
-* [ ] **Frontend Foundation:** Establishing the "Control Room" design system with reactive components.
+* [x] **Data Seeding:** Implementation of essential and demo seeds for multi-tenant verification. (Completed)
+* [x] **Frontend Foundation:** Establishing the "Control Room" design system with reactive components. (Completed)
 * [ ] **JWT Secret Management:** AES-GCM encryption and S3-based secret recovery.
 * [ ] **Vector Abstraction:** Definition of the VectorStore interface and LanceDB/S3 provider.
 * [ ] **SQLite/Litestream Integration:** Automation of the state recovery and replication bridge.
 * [ ] **Ingestion Pipeline:** Pure Node.js extraction, WASM OCR, and async task queue.
+* [ ] **External Metadata Sync API:** REST endpoints for external agents to push metadata.
+* [ ] **Audit Log Ingestion API:** Centralized reporting for external sidecars.
 * [ ] **Health Endpoint:** Monitor Garage, LanceDB, and Litestream lag.
 * [ ] **Nginx Templating:** Automated generation of infrastructure configurations.
 * [ ] **Upgrade Strategy:** Command-line management of migrations and versioning.

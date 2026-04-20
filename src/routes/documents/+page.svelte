@@ -34,7 +34,7 @@
   }
 </script>
 
-<div class="space-y-6 h-full flex flex-col overflow-hidden">
+<div class="p-4 lg:p-8 space-y-6 h-full flex flex-col overflow-hidden">
   <!-- Header -->
   <div class="flex items-center justify-between">
     <div>
@@ -80,6 +80,7 @@
         </thead>
         <tbody class="divide-y divide-border font-mono">
           {#each mockDocs as doc}
+            {@const status = getStatusIcon(doc.status)}
             <tr class="hover:bg-muted/30 transition-colors group">
               <td class="p-4">
                 <div class="flex flex-col">
@@ -88,7 +89,6 @@
                 </div>
               </td>
               <td class="p-4">
-                {@const status = getStatusIcon(doc.status)}
                 <div class="flex items-center gap-2 text-[10px] font-bold uppercase {status.class}">
                   <status.icon size={12} class={doc.status === 'indexing' ? 'animate-spin' : ''} />
                   {doc.status}

@@ -19,15 +19,17 @@
     <p class="text-[11px] text-neutral-500 uppercase tracking-widest mt-1">hRAG Control Authorization Protocol</p>
   </div>
 
-  <form class="space-y-4" onsubmit={(e) => e.preventDefault()}>
+  <form class="space-y-4" method="POST" action="?/login">
     <div class="space-y-1">
       <label for="email" class="text-[10px] font-bold text-neutral-500 uppercase tracking-wider px-1">Identity</label>
       <input 
         id="email"
+        name="email"
         type="email" 
         bind:value={email}
         placeholder="email@organization.com" 
         class="w-full bg-neutral-900 border border-neutral-800 rounded-sm p-3 text-sm text-neutral-100 outline-none focus:border-signal-blue transition-colors font-mono"
+        required
       >
     </div>
     
@@ -36,10 +38,12 @@
       <div class="relative">
         <input 
           id="password"
+          name="password"
           type={showPassword ? "text" : "password"} 
           bind:value={password}
           placeholder="••••••••" 
           class="w-full bg-neutral-900 border border-neutral-800 rounded-sm p-3 text-sm text-neutral-100 outline-none focus:border-signal-blue transition-colors font-mono"
+          required
         >
         <button 
           type="button" 
@@ -55,7 +59,7 @@
       </div>
     </div>
 
-    <button class="w-full bg-signal-blue hover:bg-blue-500 text-white font-bold py-3 rounded-sm text-xs transition-colors uppercase tracking-widest shadow-lg shadow-blue-900/20">
+    <button type="submit" class="w-full bg-signal-blue hover:bg-blue-500 text-white font-bold py-3 rounded-sm text-xs transition-colors uppercase tracking-widest shadow-lg shadow-blue-900/20">
       Authorize Access
     </button>
   </form>

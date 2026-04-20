@@ -1,50 +1,47 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-background: #0a0a0a;
-  --color-foreground: #ededed;
-  --color-muted: #161616;
-  --color-muted-foreground: #a3a3a3;
-  --color-border: #262626;
-  
-  --color-signal-blue: #2563eb;
-  --color-signal-green: #22c55e;
-  --color-signal-orange: #f97316;
-  --color-signal-red: #ef4444;
+	--color-background: #0a0a0a;
+	--color-foreground: #ededed;
+	--color-muted: #161616;
+	--color-muted-foreground: #a3a3a3;
+	--color-border: #262626;
 
-  --font-sans: 'Plus Jakarta Sans', sans-serif;
-  --font-mono: 'IBM Plex Mono', monospace;
+	--color-signal-blue: #2563eb;
+	--color-signal-green: #22c55e;
+	--color-signal-orange: #f97316;
+	--color-signal-red: #ef4444;
 
-  --radius-sm: 0.125rem;
-  --radius-md: 0.25rem;
-  --radius-lg: 0.5rem;
+	--font-sans: 'Plus Jakarta Sans', sans-serif;
+	--font-mono: 'IBM Plex Mono', monospace;
+
+	--radius-sm: 0.125rem;
+	--radius-md: 0.25rem;
+	--radius-lg: 0.5rem;
 }
 
 @layer base {
-  :root {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
-    font-family: var(--font-sans);
-  }
+	:root {
+		background-color: var(--color-background);
+		color: var(--color-foreground);
+		font-family: var(--font-sans);
+	}
 
-  code, pre {
-    font-family: var(--font-mono);
-  }
+	code,
+	pre {
+		font-family: var(--font-mono);
+	}
 }
 
 /* Custom grid background for the "Control Room" feel */
 .control-room-grid {
-  background-image: radial-gradient(var(--color-border) 1px, transparent 1px);
-  background-size: 20px 20px;
+	background-image: radial-gradient(var(--color-border) 1px, transparent 1px);
+	background-size: 20px 20px;
 }
 
 /* Scanline effect for added industrial feel */
 .scanline {
-  background: linear-gradient(
-    to bottom,
-    rgba(255, 255, 255, 0) 50%,
-    rgba(0, 0, 0, 0.05) 50%
-  );
-  background-size: 100% 4px;
-  pointer-events: none;
+	background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.05) 50%);
+	background-size: 100% 4px;
+	pointer-events: none;
 }

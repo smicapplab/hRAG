@@ -5,7 +5,7 @@ import * as dotenv from 'dotenv';
 
 // Standard Node.js environment variable loading
 if (typeof process !== 'undefined') {
-    dotenv.config();
+	dotenv.config();
 }
 
 // In SvelteKit, DATABASE_URL will be in process.env if using adapter-node or during dev.
@@ -13,7 +13,7 @@ if (typeof process !== 'undefined') {
 const databaseUrl = process.env.DATABASE_URL;
 
 if (!databaseUrl) {
-    throw new Error('DATABASE_URL is not set in environment variables');
+	throw new Error('DATABASE_URL is not set in environment variables');
 }
 
 const client = createClient({ url: databaseUrl });

@@ -1,7 +1,9 @@
 <script lang="ts">
   import { Send, Bot, FileText, ChevronRight } from 'lucide-svelte';
+  import { getContext } from 'svelte';
 
   let query = $state('');
+  const chatHistory = getContext<any>('chatHistory');
 
   const messages = [
     {
@@ -20,6 +22,21 @@
 </script>
 
 <div class="flex-1 flex flex-col h-full overflow-hidden">
+  <!-- Mobile History Toggle -->
+  {#if !chatHistory.isOpen()}
+    <div class="lg:hidden px-8 pt-4">
+      <button 
+        class="text-[10px] font-bold text-signal-blue uppercase tracking-widest flex items-center gap-2"
+        onclick={() => chatHistory.toggle()}
+      >
+        <ChevronRight size={14} class="rotate-180" />
+        View History
+      </button>
+    </div>
+  {:else}
+    <div class="lg:hidden h-14"></div> <!-- Spacer when history is open -->
+  {/if}
+
   <!-- Messages Area -->
   <div class="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
     {#each messages as msg}

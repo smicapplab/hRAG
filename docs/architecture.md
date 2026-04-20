@@ -26,6 +26,10 @@ hRAG follows a shared-nothing, three-tier architecture. Each tier is physically 
         *   `hrag-vectors/`: LanceDB vector fragments.
         *   `hrag-system/secrets`: AES-GCM encrypted JWT keys.
         *   `hrag-system/metadata`: Litestream SQLite snapshots and Postgres migration logs.
+    *   **Automated Provisioning:** hRAG automates storage setup across three modes:
+        1. **Native Binary**: Portable `garage` binary setup for standalone use.
+        2. **Docker Sidecar**: Containerized setup for developers and easy cleanup.
+        3. **Enterprise Cluster**: Manual connection to a distributed, multi-node cluster.
     *   **Litestream:** Continuously streams SQLite metadata changes from the compute node to Garage S3.
 
 ---
@@ -155,7 +159,8 @@ hRAG intentionally avoids the Python ecosystem to prioritize **system integrity*
 ### 6.1 Dependency Hell Avoidance
 Python-based RAG stacks frequently suffer from "dependency hell," requiring complex combinations of `pip`, `venv`, system-level C++ compilers, and specific CUDA versions. This often makes Docker a requirement rather than an option.
 *   **hRAG Strategy:** By standardizing on **SvelteKit (Node.js)**, we ensure that any machine with a modern Node.js runtime can run the entire platform. 
-*   **WASM Isolation:** High-performance tasks (OCR, Vector Search) are handled via WASM-compiled binaries, ensuring they run consistently across different operating systems without local compilation.
+*   **UNIX-First Focus:** hRAG is optimized for **Linux** and **macOS**. Windows is supported strictly via **WSL2** to maintain a consistent environment and avoid platform-specific path and binary issues.
+*   **WASM Isolation:** High-performance tasks (OCR, Vector Search) are handled via WASM-compiled binaries, ensuring they run consistently across supported systems without local compilation.
 
 ### 6.2 Security & Maintenance
 *   **Single Runtime:** Maintaining a single runtime (Node.js) reduces the attack surface and simplifies supply chain auditing compared to multi-language stacks (e.g., Node frontend + Python backend).

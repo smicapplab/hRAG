@@ -13,11 +13,12 @@ Detailed specifications and guides for the hRAG platform:
 *   **[UI Specification](./docs/ui-specs.md)**: "Control Room" design tokens and static interface mockups.
 
 ## Core Philosophy
-
 * **Stateless Compute:** All identity, metadata, and vector state resides in the storage tier.
 * **S3-Native:** LanceDB fragments and SQLite snapshots are stored directly in Garage S3.
-* **Single Runtime:** Built exclusively on SvelteKit (Node.js/TypeScript) to ensure portability, minimal bundle size, and zero-config deployment.
-* **Flexible Embeddings:** Supports **fully air-gapped** local inference (@xenova/transformers), GPU-accelerated local sidecars (Ollama), and cloud-based providers (OpenAI, Gemini, Anthropic).
+* **Single Runtime:** Built exclusively on SvelteKit (Node.js/TypeScript).
+* **UNIX-First:** Optimized for **macOS** and **Linux**. Windows is supported via **WSL2** or **Docker Mode**.
+* **Flexible Embeddings:** Supports **fully air-gapped** local inference.
+
 * **No-Docker Mandate:** Designed to run as high-performance binaries or standard environments without requiring containerization.
 * **Industrial Interface:** A dense, dark-themed "Control Room" aesthetic optimized for technical data density.
 
@@ -68,20 +69,35 @@ To keep the API responsive, ingestion is handled via an internal async queue.
 
 ## Installation and Deployment
 
-### Phase 1: Standalone Mode
-1.  Initialize a single-node Garage S3 instance.
-    *   **WARNING:** Single-node Garage has **ZERO replication**. Data loss will occur if the physical disk fails.
-2.  Execute `install.sh` to configure:
-    *   **Master Passphrase** (for secret encryption).
-    *   **Embedding Provider** (Local Transformers, Ollama, OpenAI, Gemini, or Anthropic).
-    *   **Database Mode** (SQLite vs Postgres).
-3.  Start the hRAG server.
+hRAG is designed for **Zero-Config** deployment. The `install.sh` wizard will automatically detect missing storage and offer three provisioning modes:
 
-### Phase 2: Enterprise Cluster
-1.  Deploy additional Garage nodes and join them to the cluster for replication.
-2.  Spin up multiple hRAG compute nodes pointing to the shared S3 cluster.
-3.  Designate a Primary Node via `HRAG_PRIMARY=true` for vector write operations.
-4.  Configure Nginx to load balance across the compute pool.
+### 1. Storage Provisioning Modes
+*   **Mode A: Native Binary** (The Portable Path): Downloads the `garage` binary directly to `./bin`. Ideal for single-machine, air-gapped, or Docker-free environments.
+*   **Mode B: Docker** (The Clean Path): Generates a `docker-compose.yaml` and starts a containerized Garage instance. Ideal for developers who want easy cleanup.
+*   **Mode C: External/Cluster** (The Enterprise Path): Skips local setup and connects to an existing Garage or S3-compatible cluster.
+
+### 2. The Setup Protocol
+1.  Run `./scripts/install.sh`.
+2.  Select your **Storage Mode** if prompted.
+3.  Provide a **Master Passphrase** (this is the key to your "Iron-Clad" vault).
+4.  The script will automatically:
+    *   Generate secure `JWT_SECRET` and `ADMIN_PASSWORD`.
+    *   **Seal** those secrets into your S3 backend using AES-GCM.
+    *   Initialize the **Drizzle** schema and seed the database.
+
+### 3. Execution
+*   **Development**: `./scripts/dev.sh` (Hot-reload, schema-push).
+*   **Production**: `./scripts/run.sh` (Restore -> Migrate -> Replicate).
+
+### 4. Sample Credentials (Demo Data)
+If you opted to seed demo data during installation, use these identities to test multi-tenancy:
+
+| Role | Identity (Email) | Access Secret |
+| :--- | :--- | :--- |
+| **System Overseer** | `admin@hrag.local` | `023ca5e527773ab6` |
+| **Field Manager** | `manager.ops@hrag.local` | `password123` |
+| **Logistics Staff** | `staff.logistics@hrag.local` | `password123` |
+| **Compliance Auditor** | `auditor@hrag.local` | `password123` |
 
 ## Observability
 *   **Health:** `/api/v1/health` (Checks API, DB, S3, and Litestream replication lag).

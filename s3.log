@@ -1,0 +1,15 @@
+[+] S3 Mock active on http://127.0.0.1:3900
+[MOCK S3] GET /
+Error: EISDIR: illegal operation on a directory, read
+    at Object.readSync (node:fs:741:18)
+    at tryReadSync (node:fs:418:20)
+    at Object.readFileSync (node:fs:472:19)
+    at <anonymous> (/Users/steve/Projects/Personal/hRAG/hRAG/scripts/s3-mock.ts:31:25)
+    at Layer.handleRequest (/Users/steve/Projects/Personal/hRAG/hRAG/node_modules/router/lib/layer.js:152:17)
+    at trimPrefix (/Users/steve/Projects/Personal/hRAG/hRAG/node_modules/router/index.js:342:13)
+    at /Users/steve/Projects/Personal/hRAG/hRAG/node_modules/router/index.js:297:9
+    at processParams (/Users/steve/Projects/Personal/hRAG/hRAG/node_modules/router/index.js:582:12)
+    at next (/Users/steve/Projects/Personal/hRAG/hRAG/node_modules/router/index.js:291:5)
+    at read (/Users/steve/Projects/Personal/hRAG/hRAG/node_modules/body-parser/lib/read.js:53:5)
+[MOCK S3] HEAD /hrag-system/
+[MOCK S3] PUT /hrag-system/secrets/jwt.enc

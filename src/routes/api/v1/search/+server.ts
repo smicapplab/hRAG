@@ -56,12 +56,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         // Ensure that the documents STILL exist and STILL match user permissions 
         // in the source-of-truth metadata database before releasing the fragments.
         const validRelationalDocs = await db.query.documents.findMany({
-            where: (doc, { and, or }) => and(
+            where: (doc, { and, or, inArray, eq }) => and(
                 inArray(doc.id, retrievedDocIds),
                 or(
                     eq(doc.ownerId, userId),
                     eq(doc.classification, 'PUBLIC'),
-                    groupIds.length > 0 ? inArray(doc.groupId, groupIds) : undefined
+                    groupIds.length > 0 ? inArray(doc.groupId, groupIds) : undefined,
+                    authorizedDocIds.length > 0 ? inArray(doc.id, authorizedDocIds) : undefined // Add this
                 )
             )
         });

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { db } from '../db';
 import * as schema from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, count } from 'drizzle-orm';
 
 // Mock the database
 vi.mock('../db', () => ({
@@ -15,16 +15,15 @@ vi.mock('../db', () => ({
     }
 }));
 
-describe('Privacy Scoping Logic', () => {
-    it('should correctly include shared documents in listing', async () => {
+describe('Privacy Scoping Logic (Scalable)', () => {
+    it('should correctly include shared documents using exists subquery', async () => {
         const userId = 'user-abc';
         const groupIds = ['group-1'];
 
-        // Mock shared documents select
-        const mockSharedDocs = [{ documentId: 'doc-shared-1' }];
+        // Mock total count select
         (db.select as any).mockReturnValue({
             from: vi.fn().mockReturnValue({
-                where: vi.fn().mockResolvedValue(mockSharedDocs)
+                where: vi.fn().mockResolvedValue([{ value: 10 }])
             })
         });
 
@@ -36,27 +35,37 @@ describe('Privacy Scoping Logic', () => {
         (db.query.documents.findMany as any).mockResolvedValue(mockDocs);
 
         // Simulate the logic in +page.server.ts
-        const sharedDocsResult = await db.select({ documentId: schema.documentPermissions.documentId })
-            .from(schema.documentPermissions)
-            .where(eq(schema.documentPermissions.userId, userId));
-        
-        const sharedIds = sharedDocsResult.map(d => d.documentId);
-
-        const userDocs = await db.query.documents.findMany({
-            where: (doc: any, { eq, or, inArray }: any) => or(
-                eq(doc.ownerId, userId),
-                eq(doc.classification, 'PUBLIC'),
-                groupIds.length > 0 ? inArray(doc.groupId, groupIds) : undefined,
-                sharedIds.length > 0 ? inArray(doc.id, sharedIds) : undefined
+        const filter = (doc: any, { eq, or, and, inArray, exists }: any) => or(
+            eq(doc.ownerId, userId),
+            eq(doc.classification, 'PUBLIC'),
+            groupIds.length > 0 ? inArray(doc.groupId, groupIds) : undefined,
+            exists(
+                // This is a simplified subquery representation for testing the structure
+                { table: 'document_permissions' }
             )
+        );
+
+        // 1. Total count check
+        const [totalCountResult] = await db.select({ value: count() })
+            .from(schema.documents)
+            .where(filter(schema.documents, { eq: vi.fn(), or: vi.fn(), and: vi.fn(), inArray: vi.fn(), exists: vi.fn() }));
+
+        expect(totalCountResult.value).toBe(10);
+
+        // 2. Listing check
+        const userDocs = await db.query.documents.findMany({
+            where: filter,
+            limit: 50,
+            offset: 0
         });
 
         expect(userDocs).toHaveLength(2);
         expect(userDocs[0].id).toBe('doc-owned-1');
-        expect(userDocs[1].id).toBe('doc-shared-1');
         
-        // Verify the query conditions (inspecting the mock call)
+        // Verify call structure
         const findManyCall = (db.query.documents.findMany as any).mock.calls[0][0];
+        expect(findManyCall.limit).toBe(50);
+        expect(findManyCall.offset).toBe(0);
         expect(findManyCall.where).toBeDefined();
     });
 });

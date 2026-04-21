@@ -2,42 +2,63 @@ import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import * as schema from '$lib/server/db/schema';
-import { eq, or, inArray } from 'drizzle-orm';
+import { eq, or, and, inArray, exists, count } from 'drizzle-orm';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
     if (!locals.user) {
         throw error(401, 'Unauthorized');
     }
 
     const { id: userId, groupIds } = locals.user;
+    const page = Number(url.searchParams.get('page')) || 1;
+    const limit = 50;
+    const offset = (page - 1) * limit;
 
     try {
         // Iron-Clad Privacy Scoping: 
-        // 1. Fetch IDs of documents shared specifically with this user via document_permissions
-        const sharedDocs = await db.select({ documentId: schema.documentPermissions.documentId })
-            .from(schema.documentPermissions)
-            .where(eq(schema.documentPermissions.userId, userId));
-        
-        const sharedIds = sharedDocs.map(d => d.documentId);
+        // We use an 'exists' subquery for sharing to avoid the inArray limit (10k+ docs)
+        const filter = (doc: any, { eq, or, and, inArray, exists }: any) => or(
+            eq(doc.ownerId, userId),
+            eq(doc.classification, 'PUBLIC'),
+            groupIds.length > 0 ? inArray(doc.groupId, groupIds) : undefined,
+            exists(
+                db.select()
+                    .from(schema.documentPermissions)
+                    .where(and(
+                        eq(schema.documentPermissions.documentId, doc.id),
+                        eq(schema.documentPermissions.userId, userId)
+                    ))
+            )
+        );
 
-        // 2. Query documents matching any of the authorized conditions
+        // 1. Get total count for pagination
+        const [totalCountResult] = await db.select({ value: count() })
+            .from(schema.documents)
+            .where(filter(schema.documents, { eq, or, and, inArray, exists }));
+
+        const totalDocs = totalCountResult.value;
+
+        // 2. Query paginated documents
         const userDocs = await db.query.documents.findMany({
-            where: (doc, { eq, or, inArray }) => or(
-                eq(doc.ownerId, userId),
-                eq(doc.classification, 'PUBLIC'),
-                groupIds.length > 0 ? inArray(doc.groupId, groupIds) : undefined,
-                sharedIds.length > 0 ? inArray(doc.id, sharedIds) : undefined
-            ),
+            where: filter,
+            limit,
+            offset,
             orderBy: (docs, { desc }) => [desc(docs.createdAt)]
         });
 
         return {
-            documents: userDocs
+            documents: userDocs,
+            pagination: {
+                total: totalDocs,
+                page,
+                totalPages: Math.ceil(totalDocs / limit)
+            }
         };
     } catch (err) {
         console.error("Error loading documents:", err);
         return {
-            documents: []
+            documents: [],
+            pagination: { total: 0, page: 1, totalPages: 0 }
         };
     }
 };

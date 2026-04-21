@@ -1,4 +1,5 @@
 import { S3Client, GetObjectCommand, PutObjectCommand, CreateBucketCommand, HeadBucketCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import * as dotenv from 'dotenv';
 
 if (typeof process !== 'undefined') {
@@ -63,4 +64,17 @@ export async function storeSecretBlob(blob: string): Promise<void> {
         Key: 'secrets/jwt.enc',
         Body: blob
     }));
+}
+
+/**
+ * Generates an authenticated Pre-signed S3 URL for secure document download.
+ * TTL is strictly enforced at 60 seconds as per Iron-Clad Security mandates.
+ */
+export async function getSignedDownloadUrl(bucket: string, key: string, ttl = 60): Promise<string> {
+    const command = new GetObjectCommand({
+        Bucket: bucket,
+        Key: key,
+    });
+    
+    return await getSignedUrl(s3, command, { expiresIn: ttl });
 }

@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { PageData } from './$types';
-  import { FileText, Upload, Search, Trash2 } from 'lucide-svelte';
-  import { invalidateAll } from '$app/navigation';
+  import { FileText, Upload, Search, Trash2, ChevronLeft, ChevronRight } from 'lucide-svelte';
+  import { invalidateAll, goto } from '$app/navigation';
   import { onMount, onDestroy } from 'svelte';
   
   let { data }: { data: PageData } = $props();
@@ -9,6 +9,8 @@
   let isUploading = $state(false);
   let fileInput: HTMLInputElement;
   let pollInterval: ReturnType<typeof setInterval> | null = null;
+
+  let pagination = $derived(data.pagination);
 
   // Auto-refresh while any document is still pending/processing
   function startPollingIfNeeded() {
@@ -93,6 +95,13 @@
       console.error(err);
       alert('Delete failed.');
     }
+  }
+
+  function changePage(newPage: number) {
+    if (newPage < 1 || newPage > pagination.totalPages) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set('page', newPage.toString());
+    goto(url.toString(), { keepFocus: true });
   }
 </script>
 
@@ -206,6 +215,37 @@
         </div>
       {/each}
     </div>
+
+    <!-- Pagination Footer -->
+    {#if pagination.totalPages > 1}
+      <div class="p-4 bg-muted/30 border-t border-border flex items-center justify-between">
+        <p class="text-[10px] text-muted-foreground uppercase tracking-widest">
+          Showing <span class="text-foreground">{data.documents.length}</span> of <span class="text-foreground">{pagination.total}</span> fragments
+        </p>
+        
+        <div class="flex items-center gap-2">
+          <button 
+            onclick={() => changePage(pagination.page - 1)}
+            disabled={pagination.page <= 1}
+            class="p-1 text-muted-foreground hover:text-signal-blue disabled:opacity-30 transition-colors"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          
+          <span class="text-[10px] font-mono font-bold uppercase tracking-tighter">
+            PAGE {pagination.page} / {pagination.totalPages}
+          </span>
+          
+          <button 
+            onclick={() => changePage(pagination.page + 1)}
+            disabled={pagination.page >= pagination.totalPages}
+            class="p-1 text-muted-foreground hover:text-signal-blue disabled:opacity-30 transition-colors"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+    {/if}
   </div>
 </div>
 

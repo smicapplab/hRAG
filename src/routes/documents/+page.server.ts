@@ -38,18 +38,24 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
         const totalDocs = totalCountResult.value;
 
-        // 2. Query paginated documents
+        // 2. Query paginated documents with relations
         const userDocs = await db.query.documents.findMany({
             where: filter,
             limit,
             offset,
+            with: {
+                permissions: {
+                    where: eq(schema.documentPermissions.userId, userId)
+                }
+            },
             orderBy: (docs, { desc }) => [desc(docs.createdAt)]
         });
 
         return {
             documents: userDocs.map(doc => ({
                 ...doc,
-                isOwner: doc.ownerId === userId
+                isOwner: doc.ownerId === userId,
+                userPermission: doc.permissions?.[0]?.permission || (doc.ownerId === userId ? 'OWNER' : 'VIEW')
             })),
             pagination: {
                 total: totalDocs,

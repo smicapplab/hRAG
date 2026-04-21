@@ -39,7 +39,7 @@ export function getEmbeddingProvider(): Embeddings {
         case 'local':
         default:
             providerInstance = new HuggingFaceTransformersEmbeddings({
-                modelName: env.LOCAL_EMBEDDING_MODEL || 'Xenova/all-MiniLM-L6-v2',
+                model: env.LOCAL_EMBEDDING_MODEL || 'Xenova/all-MiniLM-L6-v2',
             });
             break;
     }

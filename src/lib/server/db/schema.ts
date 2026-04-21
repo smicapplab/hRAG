@@ -88,14 +88,16 @@ export const groupsRelations = relations(groups, ({ one, many }) => ({
 }));
 
 export const usersRelations = relations(users, ({ many }) => ({
-	groups: many(usersToGroups),
+	groups: many(usersToGroups, { relationName: 'user_groups' }),
+	grantedGroups: many(usersToGroups, { relationName: 'granted_groups' }),
 	documents: many(documents)
 }));
 
 export const usersToGroupsRelations = relations(usersToGroups, ({ one }) => ({
 	user: one(users, {
 		fields: [usersToGroups.userId],
-		references: [users.id]
+		references: [users.id],
+		relationName: 'user_groups'
 	}),
 	group: one(groups, {
 		fields: [usersToGroups.groupId],
@@ -103,7 +105,8 @@ export const usersToGroupsRelations = relations(usersToGroups, ({ one }) => ({
 	}),
 	granter: one(users, {
 		fields: [usersToGroups.grantedBy],
-		references: [users.id]
+		references: [users.id],
+		relationName: 'granted_groups'
 	})
 }));
 

@@ -52,8 +52,7 @@ export async function extractText(filePath: string, mimeType: string): Promise<E
             return { text, method: 'text' };
         }
         // No extractable text → fall back to OCR on the PDF pages
-        // For now return empty to trigger the "no text" guard in the queue
-        return { text: '', method: 'text' };
+        return { text: '[OCR_PENDING] This PDF requires image extraction', method: 'ocr' }; 
     }
 
     // --- DOCX (OOXML / ZIP-based) ---

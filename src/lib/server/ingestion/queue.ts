@@ -5,6 +5,7 @@ import { db } from '../db';
 import * as schema from '../db/schema';
 import { eq } from 'drizzle-orm';
 import crypto from 'node:crypto';
+import * as fs from 'node:fs/promises';
 
 export interface IngestionJob {
     id: string;
@@ -54,6 +55,9 @@ class IngestionQueueManager {
                 await db.update(schema.documents)
                     .set({ ingestionStatus: 'failed', updatedAt: new Date() })
                     .where(eq(schema.documents.id, job.docId));
+            } finally {
+                // Cleanup temp file even on failure (GEMINI.md mandate for statelessness)
+                await fs.unlink(job.localFilePath).catch(() => {});
             }
         }
 
@@ -80,11 +84,11 @@ class IngestionQueueManager {
         // 4. Construct Vector Documents and Write to LanceDB
         console.log(`[Ingestion] Indexing to VectorStore...`);
         
-        // Prepare Unified ACL
-        const accessIds: string[] = [];
-        if (job.isPublic) accessIds.push('public:true');
+        // Prepare Unified ACL (GEMINI.md mandate)
+        const accessIds: string[] = [`u:${job.ownerId}`]; 
+        if (job.isPublic) accessIds.push('r:global');
         for (const gid of job.groupIds) {
-            accessIds.push(`group:${gid}`);
+            accessIds.push(`g:${gid}`);
         }
 
         const documents = chunks.map((chunkText, i) => {

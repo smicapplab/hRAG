@@ -17,11 +17,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
     try {
         const body = await request.json();
-        const { query, limit = 5 } = body;
+        let { query, limit = 5 } = body;
 
         if (!query || typeof query !== 'string') {
             return json({ error: 'Invalid query string' }, { status: 400 });
         }
+
+        // Spec: Validate and cap limit
+        limit = Math.min(Math.max(1, limit), 50);
 
         // 2. Generate Embedding
         const queryVector = await generateQueryEmbedding(query);
@@ -44,32 +47,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         // 4. Defense-in-Depth (Relational Post-Validation)
         // Ensure that the documents STILL exist and STILL match user permissions 
         // in the source-of-truth metadata database before releasing the fragments.
-        const conditions = [
-            eq(schema.documents.ownerId, userId),
-            eq(schema.documents.classification, 'PUBLIC')
-        ];
-
-        if (groupIds && groupIds.length > 0) {
-            conditions.push(inArray(schema.documents.groupId, groupIds));
-        }
-
-        const validDocs = await db.query.documents.findMany({
-            where: (doc) => or(
-                ...conditions
-            ) // wait, to combine AND with IN ARRAY we just do: `undefined` below logic handles it. Let's write properly:
-        });
-        
-        // Let's rewrite the Drizzle query to combine `inArray(id, retrievedDocIds)` AND the permission OR:
-        /*
-        const validDocs = await db.query.documents.findMany({
-            where: and(
-                inArray(schema.documents.id, retrievedDocIds),
-                or(...conditions)
-            )
-        });
-        */
-        
-        // Re-written safely:
         const validRelationalDocs = await db.query.documents.findMany({
             where: (doc, { and, or }) => and(
                 inArray(doc.id, retrievedDocIds),

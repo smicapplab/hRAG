@@ -16,6 +16,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         return json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Spec 4: Enforce 50MB upload limit
+    const MAX_SIZE = 50 * 1024 * 1024; // 50MB
+    const contentLength = request.headers.get('content-length');
+    if (contentLength && parseInt(contentLength) > MAX_SIZE) {
+        return json({ error: 'File too large' }, { status: 413 });
+    }
+
     try {
         const formData = await request.formData();
         const file = formData.get('file') as File;

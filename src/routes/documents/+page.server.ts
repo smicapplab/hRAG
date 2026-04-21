@@ -11,22 +11,23 @@ export const load: PageServerLoad = async ({ locals }) => {
 
     const { id: userId, groupIds } = locals.user;
 
-    // Iron-Clad Privacy Scoping: 
-    // WHERE (owner_id = user_id OR group_id IN (group_ids) OR classification = 'PUBLIC')
-    
-    // Prepare the OR conditions
-    const conditions = [
-        eq(schema.documents.ownerId, userId),
-        eq(schema.documents.classification, 'PUBLIC')
-    ];
-
-    if (groupIds && groupIds.length > 0) {
-        conditions.push(inArray(schema.documents.groupId, groupIds));
-    }
-
     try {
+        // Iron-Clad Privacy Scoping: 
+        // 1. Fetch IDs of documents shared specifically with this user via document_permissions
+        const sharedDocs = await db.select({ documentId: schema.documentPermissions.documentId })
+            .from(schema.documentPermissions)
+            .where(eq(schema.documentPermissions.userId, userId));
+        
+        const sharedIds = sharedDocs.map(d => d.documentId);
+
+        // 2. Query documents matching any of the authorized conditions
         const userDocs = await db.query.documents.findMany({
-            where: or(...conditions),
+            where: (doc, { eq, or, inArray }) => or(
+                eq(doc.ownerId, userId),
+                eq(doc.classification, 'PUBLIC'),
+                groupIds.length > 0 ? inArray(doc.groupId, groupIds) : undefined,
+                sharedIds.length > 0 ? inArray(doc.id, sharedIds) : undefined
+            ),
             orderBy: (docs, { desc }) => [desc(docs.createdAt)]
         });
 

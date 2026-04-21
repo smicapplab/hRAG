@@ -41,6 +41,18 @@ export class LanceDBStore implements VectorStore {
     async addDocuments(documents: VectorDocument[]): Promise<void> {
         if (!this.db) await this.initialize();
         if (documents.length === 0) return;
+
+        const tableNames = await this.db!.tableNames();
+        let table: lancedb.Table | undefined;
+        
+        if (tableNames.includes(this.tableName)) {
+            table = await this.db!.openTable(this.tableName);
+            
+            // Spec 3.1: Delete existing chunks for these docIds first to prevent duplicates
+            const docIds = [...new Set(documents.map(d => d.docId))];
+            const idList = docIds.map(id => `'${id.replace(/'/g, "''")}'`).join(', ');
+            await table.delete(`docId IN (${idList})`);
+        }
         
         // Flatten array fields for LanceDB SQL compatibility
         const data = documents.map(doc => ({
@@ -50,13 +62,12 @@ export class LanceDBStore implements VectorStore {
             vector: doc.vector,
             ownerId: doc.ownerId,
             // Pack accessIds with bounding commas for exact LIKE matching
-            accessIds: doc.accessIds.length > 0 ? `,${doc.accessIds.join(',')},` : '', 
+            // Standardized format: ,u:id,g:id,r:global,
+            accessIds: `,${doc.accessIds.join(',')},`, 
             metadata: JSON.stringify(doc.metadata || {})
         }));
 
-        const tableNames = await this.db!.tableNames();
-        if (tableNames.includes(this.tableName)) {
-            const table = await this.db!.openTable(this.tableName);
+        if (table) {
             await table.add(data);
         } else {
             await this.db!.createTable(this.tableName, data);
@@ -83,10 +94,12 @@ export class LanceDBStore implements VectorStore {
 
         const table = await this.db!.openTable(this.tableName);
         
+        // Sanitize docId to prevent injection
+        const safeDocId = docId.replace(/'/g, "''");
         // Pack accessIds with bounding commas for exact LIKE matching
-        const packedAccessIds = accessIds.length > 0 ? `,${accessIds.join(',')},` : '';
+        const formattedAccessIds = `,${accessIds.join(',')},`;
         
-        await table.update({ accessIds: packedAccessIds }, { where: `docId = '${docId}'` });
+        await table.update({ accessIds: formattedAccessIds }, { where: `docId = '${safeDocId}'` });
     }
 
     async similaritySearch(
@@ -104,13 +117,18 @@ export class LanceDBStore implements VectorStore {
         // Hard-Filtering: Mandatory engine-level filtering using "Unified ACL" metadata (`owner_id` + prefixed `access_ids`).
         // Private-by-Default: Queries must always anchor on `owner_id` to ensure creators always have access even if sharing is null.
 
-        const accessConditions: string[] = [];
-        accessConditions.push(`accessIds LIKE '%,public:true,%'`);
-        for (const groupId of securityFilter.groupIds) {
-            accessConditions.push(`accessIds LIKE '%,group:${groupId},%'`);
-        }
+        const tokens = [
+            `u:${securityFilter.userId}`,
+            ...securityFilter.groupIds.map(id => `g:${id}`),
+            'r:global'
+        ];
+
+        // Sanitize userId to prevent injection in ownerId check
+        const safeUserId = securityFilter.userId.replace(/'/g, "''");
         
-        const filterStr = `ownerId = '${securityFilter.userId}' OR ${accessConditions.join(' OR ')}`;
+        // Use LIKE with bounding commas for exact prefix match
+        const accessConditions = tokens.map(t => `accessIds LIKE '%,${t},%'`).join(' OR ');
+        const filterStr = `ownerId = '${safeUserId}' OR ${accessConditions}`;
 
         const results = await table.search(queryVector)
             .limit(limit)

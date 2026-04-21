@@ -29,12 +29,20 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         // 2. Generate Embedding
         const queryVector = await generateQueryEmbedding(query);
 
+        // Fetch shared document IDs for the user
+        const sharedDocs = await db.select({ id: schema.documentPermissions.documentId })
+            .from(schema.documentPermissions)
+            .where(eq(schema.documentPermissions.userId, userId));
+        
+        const authorizedDocIds = sharedDocs.map(d => d.id);
+
         // 3. Iron-Clad Vector Search (Pre-Filter)
         // VectorStore enforces Engine-Level unified ACL scoping
         const vectorStore = await getVectorStore();
         const vectorResults = await vectorStore.similaritySearch(queryVector, limit, {
             userId,
-            groupIds: groupIds || []
+            groupIds: groupIds || [],
+            authorizedDocIds
         });
 
         if (vectorResults.length === 0) {

@@ -62,9 +62,9 @@ hRAG supports a pluggable architecture to balance portability with enterprise-gr
 ### 2.3 Embedding Engine Strategy
 hRAG provides a flexible embedding layer to support varying operational requirements.
 
-*   **Mode A: Local Transformers (@xenova/transformers)**
+*   **Mode A: Local Transformers (@xenova/transformers) [DEFAULT]**
     *   **Architecture:** Fully in-process inference via WASM/ONNX.
-    *   **Connectivity:** **Air-gapped compatible.** No sidecar or external API required.
+    *   **Connectivity:** **Air-gapped compatible.** No sidecar or external API required. Works out of the box with zero configuration or additional installation.
     *   **Best for:** High-privacy, zero-dependency, and restricted-network environments.
 *   **Mode B: Ollama (Local Sidecar)**
     *   **Architecture:** Separate process running on the same host or cluster.

@@ -42,6 +42,7 @@ export const documents = sqliteTable('documents', {
 	ownerId: text('owner_id').notNull().references(() => users.id, { onDelete: 'set null' }),
 	groupId: text('group_id').references(() => groups.id, { onDelete: 'set null' }),
 	classification: text('classification').notNull().default('INTERNAL'),
+	ingestionStatus: text('ingestion_status', { enum: ['pending', 'processing', 'done', 'failed'] }).notNull().default('pending'),
 	createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 	updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date())
 });

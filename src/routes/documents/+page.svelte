@@ -1,15 +1,42 @@
 <script lang="ts">
-  import { FileText, Upload, Plus, Trash2, Search, Filter } from 'lucide-svelte';
+  import type { PageData } from './$types';
+  import { FileText, Upload, Search, Trash2 } from 'lucide-svelte';
+  import { invalidateAll } from '$app/navigation';
+  import { onMount, onDestroy } from 'svelte';
   
-  // These will normally come from a +page.server.ts load function
-  let documents = $state([
-    { id: '1', name: 'field_ops_logistics.md', classification: 'CONFIDENTIAL', createdAt: new Date() },
-    { id: '2', name: 'security_audit_hq.txt', classification: 'INTERNAL', createdAt: new Date(Date.now() - 86400000) },
-    { id: '3', name: 'rag_survey.pdf', classification: 'PUBLIC', createdAt: new Date(Date.now() - 172800000) }
-  ]);
+  let { data }: { data: PageData } = $props();
   
   let isUploading = $state(false);
   let fileInput: HTMLInputElement;
+  let pollInterval: ReturnType<typeof setInterval> | null = null;
+
+  // Auto-refresh while any document is still pending/processing
+  function startPollingIfNeeded() {
+    const hasPending = data.documents.some(
+      (d: any) => d.ingestionStatus === 'pending' || d.ingestionStatus === 'processing'
+    );
+    if (hasPending && !pollInterval) {
+      pollInterval = setInterval(async () => {
+        await invalidateAll();
+        const stillPending = data.documents.some(
+          (d: any) => d.ingestionStatus === 'pending' || d.ingestionStatus === 'processing'
+        );
+        if (!stillPending && pollInterval) {
+          clearInterval(pollInterval);
+          pollInterval = null;
+        }
+      }, 2500);
+    }
+  }
+
+  onMount(() => startPollingIfNeeded());
+  onDestroy(() => { if (pollInterval) clearInterval(pollInterval); });
+
+  $effect(() => {
+    // Re-evaluate whenever data changes
+    data.documents;
+    startPollingIfNeeded();
+  });
 
   async function handleFileUpload(event: Event) {
     const target = event.target as HTMLInputElement;
@@ -20,7 +47,7 @@
 
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('classification', 'INTERNAL'); // Defaulting for simple UI
+    formData.append('classification', 'INTERNAL');
 
     try {
       const response = await fetch('/api/v1/documents', {
@@ -31,8 +58,8 @@
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          // Optimistically add to UI list
-          documents = [result.document, ...documents];
+          await invalidateAll();
+          startPollingIfNeeded();
         }
       } else {
         alert('Upload failed.');
@@ -43,6 +70,28 @@
     } finally {
       isUploading = false;
       if (fileInput) fileInput.value = '';
+    }
+  }
+
+  async function handleDelete(docId: string, name: string) {
+    if (!confirm(`Are you sure you want to delete "${name}"? This will remove all associated vector data.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/v1/documents/${docId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        await invalidateAll();
+      } else {
+        const err = await response.json();
+        alert(`Delete failed: ${err.error || 'Server error'}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Delete failed.');
     }
   }
 </script>
@@ -89,18 +138,19 @@
   <div class="flex-1 border-t border-border overflow-hidden flex flex-col -mx-8 lg:mx-0 lg:border">
     <!-- Table Header -->
     <div class="hidden sm:grid grid-cols-12 gap-4 items-center bg-muted/50 p-4 border-b border-border text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
-      <div class="col-span-5 md:col-span-6">Identifier</div>
-      <div class="col-span-3 lg:col-span-2">Classification</div>
-      <div class="col-span-3 lg:col-span-3">Timestamp Added</div>
+      <div class="col-span-5">Identifier</div>
+      <div class="col-span-2">Classification</div>
+      <div class="col-span-2">Status</div>
+      <div class="col-span-2">Timestamp Added</div>
       <div class="col-span-1 text-right">Actions</div>
     </div>
 
     <!-- Table Body -->
     <div class="flex-1 overflow-y-auto custom-scrollbar bg-background">
-      {#each documents as doc}
+      {#each data.documents as doc}
         <div class="grid sm:grid-cols-12 gap-4 items-center p-4 border-b border-border/50 hover:bg-muted/20 transition-colors group">
           
-          <div class="col-span-12 sm:col-span-5 md:col-span-6 flex items-center gap-3">
+          <div class="col-span-12 sm:col-span-5 flex items-center gap-3">
             <FileText size={16} class="text-signal-blue shrink-0" />
             <div>
               <p class="text-sm font-mono text-foreground tracking-tight group-hover:text-signal-blue transition-colors cursor-pointer truncate">
@@ -110,8 +160,7 @@
             </div>
           </div>
 
-          <div class="col-span-4 sm:col-span-3 lg:col-span-2 flex items-center">
-            <!-- Classification Badge -->
+          <div class="col-span-4 sm:col-span-2 flex items-center">
             <span class="px-2 py-0.5 rounded-sm border text-[9px] font-bold uppercase tracking-widest whitespace-nowrap
               {doc.classification === 'CONFIDENTIAL' ? 'bg-signal-orange/10 border-signal-orange/20 text-signal-orange' : 
                doc.classification === 'PUBLIC' ? 'bg-signal-green/10 border-signal-green/20 text-signal-green' : 
@@ -121,12 +170,31 @@
             </span>
           </div>
 
-          <div class="hidden sm:block col-span-3 lg:col-span-3">
+          <!-- Ingestion Status Badge -->
+          <div class="col-span-4 sm:col-span-2 flex items-center gap-1.5">
+            {#if doc.ingestionStatus === 'done'}
+              <span class="px-2 py-0.5 rounded-sm border text-[9px] font-bold uppercase tracking-widest bg-signal-green/10 border-signal-green/20 text-signal-green">Done</span>
+            {:else if doc.ingestionStatus === 'processing'}
+              <div class="w-2 h-2 rounded-full bg-signal-blue animate-pulse shrink-0"></div>
+              <span class="text-[9px] font-mono text-signal-blue uppercase tracking-widest">Processing</span>
+            {:else if doc.ingestionStatus === 'failed'}
+              <span class="px-2 py-0.5 rounded-sm border text-[9px] font-bold uppercase tracking-widest bg-signal-orange/10 border-signal-orange/20 text-signal-orange">Failed</span>
+            {:else}
+              <div class="w-2 h-2 rounded-full bg-muted-foreground animate-pulse shrink-0"></div>
+              <span class="text-[9px] font-mono text-muted-foreground uppercase tracking-widest">Pending</span>
+            {/if}
+          </div>
+
+          <div class="hidden sm:block col-span-2">
             <p class="text-[10px] font-mono text-muted-foreground">{new Date(doc.createdAt).toISOString()}</p>
           </div>
 
           <div class="absolute sm:relative right-4 sm:right-auto sm:col-span-1 flex justify-end">
-            <button class="p-2 text-muted-foreground hover:text-signal-red hover:bg-signal-red/10 rounded-sm transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-0">
+            <button 
+              onclick={() => handleDelete(doc.id, doc.name)}
+              class="p-2 text-muted-foreground hover:text-signal-red hover:bg-signal-red/10 rounded-sm transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-0"
+              title="DELETE DOCUMENT"
+            >
               <Trash2 size={14} />
             </button>
           </div>

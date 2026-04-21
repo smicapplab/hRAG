@@ -70,7 +70,7 @@ Every hRAG compute node follows this sequence on boot to ensure state recovery a
 2.  **Run hRAG:** The `install.sh` script prompts for:
     *   **Master Passphrase** (for secret encryption).
     *   **Embedding Provider**:
-        *   **Local Transformers** (In-process, air-gapped).
+        *   **Local Transformers** (Default, In-process, air-gapped, zero-config).
         *   **Ollama** (Local GPU-accelerated sidecar).
         *   **Cloud** (OpenAI, Gemini, or Anthropic).
     *   **Database Mode** (SQLite vs Postgres).
@@ -117,7 +117,7 @@ To keep the UI responsive, ingestion is handled via an internal async queue.
 2.  **Processing:** 
     *   **Extraction & OCR:** Pure JS normalization. OCR is triggered automatically if the PDF contains no text.
     *   **Chunking:** Recursive character splitting. Defaults: **512 tokens / 64 overlap**.
-    *   **Embedding:** Sent to the selected provider (Local Transformers, Ollama, OpenAI, Gemini, or Anthropic).
+    *   **Embedding:** Sent to the selected provider (Local Transformers by default, or Ollama, OpenAI, Gemini, Anthropic).
 3.  **Indexing:** Chunks are written to the `VectorStore` (LanceDB on S3) and metadata to Drizzle.
 4.  **Failure Contract:** 3 retries with backoff, Dead-Letter S3 bucket, and UI error visibility.
 

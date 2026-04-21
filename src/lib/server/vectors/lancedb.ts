@@ -14,9 +14,9 @@ export class LanceDBStore implements VectorStore {
         let uri = env.LANCEDB_URI;
         if (!uri) {
             if (env.S3_ENDPOINT) {
-                // Remove trailing slash and http/https; lancedb uses s3:// convention
-                const endpoint = env.S3_ENDPOINT.replace(/^https?:\/\//, '');
-                uri = `s3://${endpoint}/hrag-vectors`;
+                // S3 URI format is s3://<bucket>/<path>
+                // We provide the endpoint in storageOptions
+                uri = `s3://hrag-vectors`;
             } else {
                 uri = 'data/lancedb';
             }
@@ -30,6 +30,9 @@ export class LanceDBStore implements VectorStore {
             storageOptions.awsSecretAccessKey = env.S3_SECRET_KEY || '';
             storageOptions.awsRegion = env.S3_REGION || 'us-east-1'; // Default for Garage S3
             storageOptions.awsAllowHttp = env.S3_ENDPOINT.startsWith('http://').toString();
+            
+            const { ensureBucket } = await import('../security/s3');
+            await ensureBucket('hrag-vectors');
         }
 
         this.db = await lancedb.connect(uri, { storageOptions });
@@ -46,8 +49,8 @@ export class LanceDBStore implements VectorStore {
             text: doc.text,
             vector: doc.vector,
             ownerId: doc.ownerId,
-            // Pack accessIds into a single string for LIKE searches (engine-level unified ACL filtering)
-            accessIds: doc.accessIds.join(','), 
+            // Pack accessIds with bounding commas for exact LIKE matching
+            accessIds: doc.accessIds.length > 0 ? `,${doc.accessIds.join(',')},` : '', 
             metadata: JSON.stringify(doc.metadata || {})
         }));
 
@@ -89,9 +92,9 @@ export class LanceDBStore implements VectorStore {
         // Private-by-Default: Queries must always anchor on `owner_id` to ensure creators always have access even if sharing is null.
 
         const accessConditions: string[] = [];
-        accessConditions.push(`accessIds LIKE '%public:true%'`);
+        accessConditions.push(`accessIds LIKE '%,public:true,%'`);
         for (const groupId of securityFilter.groupIds) {
-            accessConditions.push(`accessIds LIKE '%group:${groupId}%'`);
+            accessConditions.push(`accessIds LIKE '%,group:${groupId},%'`);
         }
         
         const filterStr = `ownerId = '${securityFilter.userId}' OR ${accessConditions.join(' OR ')}`;
@@ -108,7 +111,9 @@ export class LanceDBStore implements VectorStore {
             vector: row.vector as number[],
             ownerId: row.ownerId as string,
             accessIds: (row.accessIds as string).split(',').filter(Boolean),
-            metadata: JSON.parse((row.metadata as string) || '{}')
+            metadata: JSON.parse((row.metadata as string) || '{}'),
+            // Preserve LanceDB distance score for ranking (lower = more similar)
+            _distance: row._distance as number | undefined
         }));
     }
 }

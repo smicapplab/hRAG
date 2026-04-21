@@ -17,7 +17,7 @@ Detailed specifications and guides for the hRAG platform:
 * **S3-Native:** LanceDB fragments and SQLite snapshots are stored directly in Garage S3.
 * **Single Runtime:** Built exclusively on SvelteKit (Node.js/TypeScript).
 * **UNIX-First:** Optimized for **macOS** and **Linux**. Windows is supported via **WSL2** or **Docker Mode**.
-* **Flexible Embeddings:** Supports **fully air-gapped** local inference.
+* **Flexible Embeddings:** Supports **fully air-gapped** local inference by default using `@xenova/transformers`, requiring zero configuration or installation.
 
 * **No-Docker Mandate:** Designed to run as high-performance binaries or standard environments without requiring containerization.
 * **Industrial Interface:** A dense, dark-themed "Control Room" aesthetic optimized for technical data density.

@@ -6,6 +6,7 @@ export interface VectorDocument {
     ownerId: string;
     accessIds: string[]; // E.g., ['group:123', 'public:true']
     metadata: Record<string, any>;
+    _distance?: number; // LanceDB similarity distance (lower = more relevant)
 }
 
 export interface SecurityFilter {
@@ -41,4 +42,28 @@ export interface VectorStore {
         limit: number,
         securityFilter: SecurityFilter
     ): Promise<VectorDocument[]>;
+}
+
+let storeInstance: VectorStore | null = null;
+
+/**
+ * Factory pattern to retrieve the active VectorStore implementation.
+ */
+export async function getVectorStore(): Promise<VectorStore> {
+    if (storeInstance) return storeInstance;
+
+    const { env } = await import('$env/dynamic/private');
+    const provider = (env.VECTOR_STORE_TYPE || 'lancedb').toLowerCase();
+
+    if (provider === 'lancedb') {
+        const { LanceDBStore } = await import('./lancedb');
+        storeInstance = new LanceDBStore();
+    } else if (provider === 'qdrant') {
+        throw new Error('QdrantStore is not yet implemented.');
+    } else {
+        throw new Error(`Unknown vector store provider: ${provider}`);
+    }
+
+    await storeInstance.initialize();
+    return storeInstance;
 }

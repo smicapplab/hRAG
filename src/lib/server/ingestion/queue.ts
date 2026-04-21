@@ -1,6 +1,9 @@
 import { extractText, chunkText } from './extractor';
 import { generateEmbeddings } from './embeddings';
-import { LanceDBStore } from '../vectors/lancedb';
+import { getVectorStore } from '../vectors';
+import { db } from '../db';
+import * as schema from '../db/schema';
+import { eq } from 'drizzle-orm';
 import crypto from 'node:crypto';
 
 export interface IngestionJob {
@@ -17,7 +20,6 @@ export interface IngestionJob {
 class IngestionQueueManager {
     private queue: IngestionJob[] = [];
     private isProcessing = false;
-    private vectorStore = new LanceDBStore();
 
     /**
      * Add a document processing job to the internal background queue.
@@ -39,11 +41,19 @@ class IngestionQueueManager {
 
             try {
                 console.log(`[Ingestion] Starting job ${job.id} for doc ${job.docId}`);
+                await db.update(schema.documents)
+                    .set({ ingestionStatus: 'processing', updatedAt: new Date() })
+                    .where(eq(schema.documents.id, job.docId));
                 await this.processJob(job);
+                await db.update(schema.documents)
+                    .set({ ingestionStatus: 'done', updatedAt: new Date() })
+                    .where(eq(schema.documents.id, job.docId));
                 console.log(`[Ingestion] Completed job ${job.id}`);
             } catch (error) {
                 console.error(`[Ingestion] Error processing job ${job.id}:`, error);
-                // Here we would implement retry logic or DLQ
+                await db.update(schema.documents)
+                    .set({ ingestionStatus: 'failed', updatedAt: new Date() })
+                    .where(eq(schema.documents.id, job.docId));
             }
         }
 
@@ -93,7 +103,8 @@ class IngestionQueueManager {
             };
         });
 
-        await this.vectorStore.addDocuments(documents);
+        const vectorStore = await getVectorStore();
+        await vectorStore.addDocuments(documents);
     }
 }
 

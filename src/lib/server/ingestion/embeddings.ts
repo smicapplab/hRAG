@@ -1,6 +1,7 @@
 import { OllamaEmbeddings } from '@langchain/ollama';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { GoogleGenerativeAIEmbeddings } from '@langchain/google-genai';
+import { HuggingFaceTransformersEmbeddings } from '@langchain/community/embeddings/huggingface_transformers';
 import { env } from '$env/dynamic/private';
 import type { Embeddings } from '@langchain/core/embeddings';
 
@@ -30,8 +31,9 @@ export function getEmbeddingProvider(): Embeddings {
 
         case 'local':
         default:
-            // Placeholder for @xenova/transformers implementation.
-            throw new Error("Local in-process transformers not natively installed yet. Try setting EMBEDDING_PROVIDER=ollama");
+            return new HuggingFaceTransformersEmbeddings({
+                modelName: env.LOCAL_EMBEDDING_MODEL || 'Xenova/all-MiniLM-L6-v2',
+            });
     }
 }
 

@@ -1,32 +1,30 @@
 <script lang="ts">
   import { Download, Search, Filter, Database } from 'lucide-svelte';
 
-  const mockResults = [
-    {
-      name: 'field_ops_logistics.md',
-      uploader: 's.torrefranca',
-      classification: 'CONFIDENTIAL',
-      score: '0.984',
-      updated: '2026-04-20',
-      match: 'quarterly revenue trends in Asia-Pacific region...'
-    },
-    {
-      name: 'security_audit_hq.txt',
-      uploader: 'auditor.hq',
-      classification: 'INTERNAL',
-      score: '0.912',
-      updated: '2026-03-15',
-      match: 'physical security perimeter of HQ is intact...'
-    },
-    {
-      name: 'rag_survey.pdf',
-      uploader: 'intel.analyst',
-      classification: 'PUBLIC',
-      score: '0.845',
-      updated: '2026-01-10',
-      match: 'large language models for document retrieval...'
+  let query = $state('');
+  let isSearching = $state(false);
+  let results = $state<any[]>([]);
+
+  async function handleSearch(e: KeyboardEvent) {
+    if (e.key === 'Enter' && query.trim()) {
+      isSearching = true;
+      try {
+        const response = await fetch('/api/v1/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query, limit: 10 })
+        });
+        if (response.ok) {
+          const data = await response.json();
+          results = data.results || [];
+        }
+      } catch (err) {
+        console.error("Search failed:", err);
+      } finally {
+        isSearching = false;
+      }
     }
-  ];
+  }
 
   function getClassificationClass(cls: string) {
     switch (cls) {
@@ -61,8 +59,11 @@
     <Search class="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
     <input 
       type="text" 
-      placeholder="QUERY THE INTELLIGENCE VAULT..." 
+      bind:value={query}
+      onkeydown={handleSearch}
+      placeholder={isSearching ? "SEARCHING..." : "QUERY THE INTELLIGENCE VAULT..."} 
       class="w-full bg-muted/30 border border-border rounded-sm p-4 pl-12 text-sm text-foreground outline-none focus:border-signal-blue transition-colors font-mono uppercase tracking-wider"
+      disabled={isSearching}
     >
   </div>
 
@@ -81,18 +82,18 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-border font-mono">
-          {#each mockResults as result}
+          {#each results as result}
             <tr class="hover:bg-signal-blue/5 transition-colors group">
               <td class="p-4 max-w-md">
                 <div class="flex flex-col">
                   <span class="text-xs font-bold text-foreground leading-none mb-2">{result.name}</span>
-                  <span class="text-[10px] text-muted-foreground italic truncate">
-                    MATCH: "{result.match}"
+                  <span class="text-[10px] text-muted-foreground italic line-clamp-2">
+                    MATCH: "{result.text}"
                   </span>
                 </div>
               </td>
               <td class="p-4 text-[11px] text-muted-foreground uppercase tracking-tighter">
-                {result.uploader}
+                {result.ownerId.slice(0, 8)}...
               </td>
               <td class="p-4">
                 <span class="px-2 py-0.5 rounded-sm text-[9px] font-bold border {getClassificationClass(result.classification)}">
@@ -100,15 +101,27 @@
                 </span>
               </td>
               <td class="p-4 text-[11px] text-signal-blue font-bold">
-                {result.score}
+                {result.score.toFixed(3)}
               </td>
               <td class="p-4 text-[11px] text-muted-foreground">
-                {result.updated}
+                {new Date(result.updatedAt).toISOString().split('T')[0]}
               </td>
               <td class="p-4 text-right">
                 <button class="text-muted-foreground hover:text-signal-blue transition-colors">
                   <Download size={16} />
                 </button>
+              </td>
+            </tr>
+          {:else}
+            <tr>
+              <td colspan="6" class="p-8 text-center text-[10px] uppercase tracking-widest text-muted-foreground">
+                {#if isSearching}
+                  Processing vector query...
+                {:else if query}
+                  No authorized records match this vector cluster.
+                {:else}
+                  Awaiting query pattern...
+                {/if}
               </td>
             </tr>
           {/each}
@@ -119,7 +132,7 @@
     <!-- Empty State / Footer -->
     <div class="mt-auto p-4 border-t border-border bg-muted/30 flex items-center justify-between">
       <p class="text-[10px] text-muted-foreground uppercase tracking-widest">
-        Showing <span class="text-foreground">3</span> matching resources in cluster
+        Showing <span class="text-foreground">{results.length}</span> matching resources in cluster
       </p>
       <div class="flex gap-1">
         <button class="px-2 py-1 bg-muted border border-border rounded-sm text-[10px] text-muted-foreground opacity-50 cursor-not-allowed">PREV</button>

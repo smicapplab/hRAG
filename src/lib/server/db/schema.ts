@@ -47,6 +47,14 @@ export const documents = sqliteTable('documents', {
 	updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date())
 });
 
+export const documentPermissions = sqliteTable('document_permissions', {
+	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+	documentId: text('document_id').notNull().references(() => documents.id, { onDelete: 'cascade' }),
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	permission: text('permission', { enum: ['VIEW', 'EDIT'] }).notNull().default('VIEW'),
+	createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date())
+});
+
 // --- Auditing (SOC2/GDPR) ---
 
 export const auditLogs = sqliteTable('audit_logs', {
@@ -84,5 +92,20 @@ export const usersToGroupsRelations = relations(usersToGroups, ({ one }) => ({
 	group: one(groups, {
 		fields: [usersToGroups.groupId],
 		references: [groups.id]
+	})
+}));
+
+export const documentsRelations = relations(documents, ({ many }) => ({
+	permissions: many(documentPermissions)
+}));
+
+export const documentPermissionsRelations = relations(documentPermissions, ({ one }) => ({
+	document: one(documents, {
+		fields: [documentPermissions.documentId],
+		references: [documents.id]
+	}),
+	user: one(users, {
+		fields: [documentPermissions.userId],
+		references: [users.id]
 	})
 }));

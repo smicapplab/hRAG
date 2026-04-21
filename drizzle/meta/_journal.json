@@ -8,6 +8,13 @@
       "when": 1776680525041,
       "tag": "0000_mixed_wolfpack",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1776765581820,
+      "tag": "0001_skinny_monster_badoon",
+      "breakpoints": true
     }
   ]
 }

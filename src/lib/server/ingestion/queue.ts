@@ -57,7 +57,7 @@ class IngestionQueueManager {
                     .where(eq(schema.documents.id, job.docId));
             } finally {
                 // Cleanup temp file even on failure (GEMINI.md mandate for statelessness)
-                await fs.unlink(job.localFilePath).catch(() => {});
+                await fs.unlink(job.localFilePath).catch(() => { });
             }
         }
 
@@ -68,7 +68,7 @@ class IngestionQueueManager {
         // 1. Extract Text
         console.log(`[Ingestion] Extracting text (${job.mimeType})...`);
         const { text, method } = await extractText(job.localFilePath, job.mimeType);
-        
+
         if (!text || text.trim().length === 0) {
             throw new Error("No text could be extracted from document.");
         }
@@ -83,9 +83,9 @@ class IngestionQueueManager {
 
         // 4. Construct Vector Documents and Write to LanceDB
         console.log(`[Ingestion] Indexing to VectorStore...`);
-        
+
         // Prepare Unified ACL (GEMINI.md mandate)
-        const accessIds: string[] = [`u:${job.ownerId}`]; 
+        const accessIds: string[] = [`u:${job.ownerId}`];
         if (job.isPublic) accessIds.push('r:global');
         for (const gid of job.groupIds) {
             accessIds.push(`g:${gid}`);

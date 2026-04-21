@@ -66,13 +66,16 @@ export const handle: Handle = async ({ event, resolve }) => {
             const { payload } = await jwtVerify(token, secret);
             
             // Populate locals with identity for Layer 2 & 3
+            // Spec: tokenVersion is validated ONLY at the /refresh endpoint to preserve statelessness here
             event.locals.user = {
                 id: payload.sub as string,
                 email: payload.email as string,
                 name: payload.name as string,
                 isAdmin: payload.isAdmin as boolean,
                 isCompliance: payload.isCompliance as boolean,
-                groupIds: (payload.groups as string[]) || []
+                groupIds: (payload.groups as string[]) || [],
+                groupRoles: (payload.roles as any) || {},
+                tokenVersion: (payload.tokenVersion as number) || 1
             };
         } catch (err) {
             // Invalid or expired token

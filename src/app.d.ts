@@ -1,3 +1,5 @@
+import type { Role } from '$lib/server/auth/roles';
+
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
 declare global {
@@ -11,6 +13,8 @@ declare global {
 				isAdmin: boolean;
 				isCompliance: boolean;
 				groupIds: string[];
+				groupRoles: Record<string, Role>;
+				tokenVersion: number;
 			};
 		}
 		// interface PageData {}

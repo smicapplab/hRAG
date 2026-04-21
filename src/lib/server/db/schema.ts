@@ -3,15 +3,12 @@ import { relations } from 'drizzle-orm';
 
 // --- Organizational Structure ---
 
-export const departments = sqliteTable('departments', {
-	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-	name: text('name').notNull()
-});
-
 export const groups = sqliteTable('groups', {
 	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 	name: text('name').notNull(),
-	departmentId: text('department_id').references(() => departments.id, { onDelete: 'cascade' })
+	parentId: text('parent_id').references((): any => groups.id, { onDelete: 'cascade' }),
+	level: integer('level').notNull().default(1),
+	path: text('path') // UUID-based materialized path: "id1/id2/id3"
 });
 
 // --- Identity & Access ---
@@ -21,19 +18,30 @@ export const users = sqliteTable('users', {
 	email: text('email').notNull().unique(),
 	name: text('name').notNull(),
 	passwordHash: text('password_hash').notNull(),
-	level: text('level', { enum: ['manager', 'staff'] }).notNull().default('staff'),
 	isAdmin: integer('is_admin', { mode: 'boolean' }).notNull().default(false),
-	isCompliance: integer('is_compliance', { mode: 'boolean' }).notNull().default(false)
+	isCompliance: integer('is_compliance', { mode: 'boolean' }).notNull().default(false),
+	tokenVersion: integer('token_version').notNull().default(1)
 });
 
 export const usersToGroups = sqliteTable('users_to_groups', {
 	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-	groupId: text('group_id').notNull().references(() => groups.id, { onDelete: 'cascade' })
+	groupId: text('group_id').notNull().references(() => groups.id, { onDelete: 'cascade' }),
+	role: text('role', { enum: ['VIEWER', 'EDITOR', 'MANAGER'] }).notNull().default('VIEWER'),
+	grantedBy: text('granted_by').references((): any => users.id, { onDelete: 'set null' }),
+	grantedAt: integer('granted_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date())
 }, (t) => ({
 	pk: primaryKey({ columns: [t.userId, t.groupId] })
 }));
 
 // --- Document Intelligence ---
+
+export const classificationPolicies = sqliteTable('classification_policies', {
+	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+	code: text('code').notNull().unique(), // e.g., 'CONFIDENTIAL'
+	displayName: text('display_name').notNull(),
+	minRoleRequired: text('min_role_required', { enum: ['VIEWER', 'EDITOR', 'MANAGER'] }).notNull().default('VIEWER'),
+	requiresAudit: integer('requires_audit', { mode: 'boolean' }).notNull().default(false)
+});
 
 export const documents = sqliteTable('documents', {
 	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -67,14 +75,14 @@ export const auditLogs = sqliteTable('audit_logs', {
 
 // --- Relations ---
 
-export const departmentsRelations = relations(departments, ({ many }) => ({
-	groups: many(groups)
-}));
-
 export const groupsRelations = relations(groups, ({ one, many }) => ({
-	department: one(departments, {
-		fields: [groups.departmentId],
-		references: [departments.id]
+	parent: one(groups, {
+		fields: [groups.parentId],
+		references: [groups.id],
+		relationName: 'group_hierarchy'
+	}),
+	children: many(groups, {
+		relationName: 'group_hierarchy'
 	}),
 	users: many(usersToGroups)
 }));
@@ -92,6 +100,10 @@ export const usersToGroupsRelations = relations(usersToGroups, ({ one }) => ({
 	group: one(groups, {
 		fields: [usersToGroups.groupId],
 		references: [groups.id]
+	}),
+	granter: one(users, {
+		fields: [usersToGroups.grantedBy],
+		references: [users.id]
 	})
 }));
 
@@ -108,4 +120,8 @@ export const documentPermissionsRelations = relations(documentPermissions, ({ on
 		fields: [documentPermissions.userId],
 		references: [users.id]
 	})
+}));
+
+export const classificationPoliciesRelations = relations(classificationPolicies, ({ many }) => ({
+	documents: many(documents)
 }));

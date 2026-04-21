@@ -12,6 +12,7 @@ export interface VectorDocument {
 export interface SecurityFilter {
     userId: string;
     groupIds: string[];
+    authorizedDocIds?: string[];
 }
 
 export interface VectorStore {

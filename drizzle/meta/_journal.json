@@ -8,6 +8,13 @@
       "when": 1776766240828,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1776787092667,
+      "tag": "0001_bored_impossible_man",
+      "breakpoints": true
     }
   ]
 }

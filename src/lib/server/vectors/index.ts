@@ -42,28 +42,41 @@ export interface VectorStore {
         limit: number,
         securityFilter: SecurityFilter
     ): Promise<VectorDocument[]>;
+
+    /**
+     * Update access control lists for all chunks of a document.
+     * This is used to synchronize permissions from the relational database.
+     */
+    updateAccess(docId: string, accessIds: string[]): Promise<void>;
 }
 
 let storeInstance: VectorStore | null = null;
+let initializationPromise: Promise<VectorStore> | null = null;
 
 /**
  * Factory pattern to retrieve the active VectorStore implementation.
+ * Uses a promise to prevent race conditions during multiple concurrent initializations.
  */
 export async function getVectorStore(): Promise<VectorStore> {
     if (storeInstance) return storeInstance;
+    if (initializationPromise) return initializationPromise;
 
-    const { env } = await import('$env/dynamic/private');
-    const provider = (env.VECTOR_STORE_TYPE || 'lancedb').toLowerCase();
+    initializationPromise = (async () => {
+        const { env } = await import('$env/dynamic/private');
+        const provider = (env.VECTOR_STORE_TYPE || 'lancedb').toLowerCase();
 
-    if (provider === 'lancedb') {
-        const { LanceDBStore } = await import('./lancedb');
-        storeInstance = new LanceDBStore();
-    } else if (provider === 'qdrant') {
-        throw new Error('QdrantStore is not yet implemented.');
-    } else {
-        throw new Error(`Unknown vector store provider: ${provider}`);
-    }
+        let instance: VectorStore;
+        if (provider === 'lancedb') {
+            const { LanceDBStore } = await import('./lancedb');
+            instance = new LanceDBStore();
+        } else {
+            throw new Error(`Unknown provider: ${provider}`);
+        }
 
-    await storeInstance.initialize();
-    return storeInstance;
+        await instance.initialize();
+        storeInstance = instance;
+        return storeInstance;
+    })();
+
+    return initializationPromise;
 }

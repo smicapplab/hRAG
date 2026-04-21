@@ -76,6 +76,19 @@ export class LanceDBStore implements VectorStore {
         await table.delete(`docId IN (${idList})`);
     }
 
+    async updateAccess(docId: string, accessIds: string[]): Promise<void> {
+        if (!this.db) await this.initialize();
+        const tableNames = await this.db!.tableNames();
+        if (!tableNames.includes(this.tableName)) return;
+
+        const table = await this.db!.openTable(this.tableName);
+        
+        // Pack accessIds with bounding commas for exact LIKE matching
+        const packedAccessIds = accessIds.length > 0 ? `,${accessIds.join(',')},` : '';
+        
+        await table.update({ accessIds: packedAccessIds }, { where: `docId = '${docId}'` });
+    }
+
     async similaritySearch(
         queryVector: number[],
         limit: number,

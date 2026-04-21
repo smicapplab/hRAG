@@ -47,7 +47,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
         });
 
         return {
-            documents: userDocs,
+            documents: userDocs.map(doc => ({
+                ...doc,
+                isOwner: doc.ownerId === userId
+            })),
             pagination: {
                 total: totalDocs,
                 page,

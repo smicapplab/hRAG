@@ -107,7 +107,11 @@
                 {new Date(result.updatedAt).toISOString().split('T')[0]}
               </td>
               <td class="p-4 text-right">
-                <button class="text-muted-foreground hover:text-signal-blue transition-colors">
+                <button 
+                  onclick={() => window.location.href = `/api/v1/documents/${result.docId}/download`}
+                  class="text-muted-foreground hover:text-signal-blue transition-colors"
+                  title="SECURE DOWNLOAD (60S TTL)"
+                >
                   <Download size={16} />
                 </button>
               </td>

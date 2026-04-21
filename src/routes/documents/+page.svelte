@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { PageData } from './$types';
-  import { FileText, Upload, Search, Trash2, ChevronLeft, ChevronRight } from 'lucide-svelte';
+  import { FileText, Upload, Search, Trash2, ChevronLeft, ChevronRight, Download, Share2 } from 'lucide-svelte';
   import { invalidateAll, goto } from '$app/navigation';
   import { onMount, onDestroy } from 'svelte';
   
@@ -103,6 +103,11 @@
     url.searchParams.set('page', newPage.toString());
     goto(url.toString(), { keepFocus: true });
   }
+
+  function handleDownload(docId: string) {
+    // Standard authenticated redirect to the secure issuing endpoint
+    window.location.href = `/api/v1/documents/${docId}/download`;
+  }
 </script>
 
 <div class="h-full flex flex-col pt-8 lg:p-8">
@@ -198,7 +203,14 @@
             <p class="text-[10px] font-mono text-muted-foreground">{new Date(doc.createdAt).toISOString()}</p>
           </div>
 
-          <div class="absolute sm:relative right-4 sm:right-auto sm:col-span-1 flex justify-end">
+          <div class="absolute sm:relative right-4 sm:right-auto sm:col-span-1 flex justify-end gap-1">
+            <button 
+              onclick={() => handleDownload(doc.id)}
+              class="p-2 text-muted-foreground hover:text-signal-blue hover:bg-signal-blue/10 rounded-sm transition-colors opacity-0 group-hover:opacity-100"
+              title="SECURE DOWNLOAD (60S TTL)"
+            >
+              <Download size={14} />
+            </button>
             <button 
               onclick={() => handleDelete(doc.id, doc.name)}
               class="p-2 text-muted-foreground hover:text-signal-red hover:bg-signal-red/10 rounded-sm transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-0"

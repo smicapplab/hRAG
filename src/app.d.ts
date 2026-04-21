@@ -10,6 +10,7 @@ declare global {
 				name: string;
 				isAdmin: boolean;
 				isCompliance: boolean;
+				groupIds: string[];
 			};
 		}
 		// interface PageData {}

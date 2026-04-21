@@ -8,7 +8,7 @@ if (typeof process !== 'undefined') {
 /**
  * Shared S3 client configured for Garage S3.
  */
-const s3 = new S3Client({
+export const s3 = new S3Client({
     endpoint: process.env.S3_ENDPOINT,
     region: 'us-east-1', // Garage standard
     credentials: {
@@ -21,7 +21,7 @@ const s3 = new S3Client({
 /**
  * Ensures the specified bucket exists, creating it if necessary.
  */
-async function ensureBucket(bucket: string) {
+export async function ensureBucket(bucket: string) {
     try {
         await s3.send(new HeadBucketCommand({ Bucket: bucket }));
     } catch (err: any) {

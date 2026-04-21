@@ -1,0 +1,81 @@
+import { json } from '@sveltejs/kit';
+import type { RequestHandler } from './$types';
+import { db } from '$lib/server/db';
+import * as schema from '$lib/server/db/schema';
+import { s3, ensureBucket } from '$lib/server/security/s3';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { ingestionQueue } from '$lib/server/ingestion/queue';
+import crypto from 'node:crypto';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import * as os from 'os';
+
+export const POST: RequestHandler = async ({ request, locals }) => {
+    // 1. Authenticate Request
+    if (!locals.user) {
+        return json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    try {
+        const formData = await request.formData();
+        const file = formData.get('file') as File;
+        const groupId = formData.get('groupId') as string | null;
+        const classification = (formData.get('classification') as string) || 'INTERNAL';
+
+        if (!file) {
+            return json({ error: 'No file provided' }, { status: 400 });
+        }
+
+        // 2. Stateless Storage: S3 Upload
+        const bucket = 'hrag-raw';
+        await ensureBucket(bucket);
+
+        const s3Key = `documents/${crypto.randomUUID()}_${file.name}`;
+        const buffer = Buffer.from(await file.arrayBuffer());
+
+        await s3.send(new PutObjectCommand({
+            Bucket: bucket,
+            Key: s3Key,
+            Body: buffer,
+            ContentType: file.type
+        }));
+
+        // 3. Metadata Persistence
+        const [doc] = await db.insert(schema.documents).values({
+            name: file.name,
+            s3Key,
+            ownerId: locals.user.id,
+            groupId: groupId || null,
+            classification,
+        }).returning();
+
+        // 4. Temporary Local File for Ingestion Worker
+        const tmpPath = path.join(os.tmpdir(), `${doc.id}_${file.name}`);
+        await fs.writeFile(tmpPath, buffer);
+
+        // 5. Enqueue Async Extraction/Embedding
+        // This process is backgrounded to not block the response
+        ingestionQueue.addJob({
+            id: crypto.randomUUID(),
+            docId: doc.id,
+            s3Key,
+            mimeType: file.type,
+            ownerId: locals.user.id,
+            groupIds: groupId ? [groupId] : [],
+            isPublic: classification === 'PUBLIC',
+            localFilePath: tmpPath
+        });
+
+        // 6. Audit Logging
+        await db.insert(schema.auditLogs).values({
+            userId: locals.user.id,
+            event: 'DOCUMENT_UPLOAD',
+            metadata: JSON.stringify({ docId: doc.id, fileName: file.name, classification })
+        });
+
+        return json({ success: true, document: doc });
+    } catch (err: any) {
+        console.error('[API] Error uploading document:', err);
+        return json({ error: 'Failed to process document upload' }, { status: 500 });
+    }
+};

@@ -1,0 +1,53 @@
+import { OllamaEmbeddings } from '@langchain/ollama';
+import { OpenAIEmbeddings } from '@langchain/openai';
+import { GoogleGenerativeAIEmbeddings } from '@langchain/google-genai';
+import { env } from '$env/dynamic/private';
+import type { Embeddings } from '@langchain/core/embeddings';
+
+export function getEmbeddingProvider(): Embeddings {
+    const provider = env.EMBEDDING_PROVIDER || 'local';
+
+    switch (provider.toLowerCase()) {
+        case 'ollama':
+            return new OllamaEmbeddings({
+                model: env.OLLAMA_MODEL || 'nomic-embed-text',
+                baseUrl: env.OLLAMA_BASE_URL || 'http://localhost:11434',
+            });
+            
+        case 'openai':
+            if (!env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is missing");
+            return new OpenAIEmbeddings({
+                apiKey: env.OPENAI_API_KEY,
+                modelName: env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small',
+            });
+
+        case 'gemini':
+            if (!env.GOOGLE_API_KEY) throw new Error("GOOGLE_API_KEY is missing");
+            return new GoogleGenerativeAIEmbeddings({
+                apiKey: env.GOOGLE_API_KEY,
+                model: env.GOOGLE_EMBEDDING_MODEL || 'text-embedding-004',
+            });
+
+        case 'local':
+        default:
+            // Placeholder for @xenova/transformers implementation.
+            throw new Error("Local in-process transformers not natively installed yet. Try setting EMBEDDING_PROVIDER=ollama");
+    }
+}
+
+/**
+ * Generate embeddings for an array of text chunks.
+ */
+export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
+    if (texts.length === 0) return [];
+    const provider = getEmbeddingProvider();
+    return await provider.embedDocuments(texts);
+}
+
+/**
+ * Generate an embedding for a single search query.
+ */
+export async function generateQueryEmbedding(query: string): Promise<number[]> {
+    const provider = getEmbeddingProvider();
+    return await provider.embedQuery(query);
+}

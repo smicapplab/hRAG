@@ -1,124 +1,155 @@
 <script lang="ts">
-  import { FileUp, Search, CheckCircle2, AlertCircle, Clock, Trash2 } from 'lucide-svelte';
+  import { FileText, Upload, Plus, Trash2, Search, Filter } from 'lucide-svelte';
+  
+  // These will normally come from a +page.server.ts load function
+  let documents = $state([
+    { id: '1', name: 'field_ops_logistics.md', classification: 'CONFIDENTIAL', createdAt: new Date() },
+    { id: '2', name: 'security_audit_hq.txt', classification: 'INTERNAL', createdAt: new Date(Date.now() - 86400000) },
+    { id: '3', name: 'rag_survey.pdf', classification: 'PUBLIC', createdAt: new Date(Date.now() - 172800000) }
+  ]);
+  
+  let isUploading = $state(false);
+  let fileInput: HTMLInputElement;
 
-  const mockDocs = [
-    {
-      name: 'internal_infra_roadmap.md',
-      status: 'indexing',
-      tags: ['ROADMAP', 'INFRASTRUCTURE ?'],
-      owner: 'Auto-assigned',
-      date: '2026-04-20'
-    },
-    {
-      name: 'failed_boiler_tube.pdf',
-      status: 'complete',
-      tags: ['INDUSTRIAL', 'FAILURE_ANALYSIS'],
-      owner: 's.torrefranca',
-      date: '2026-04-19'
-    },
-    {
-      name: 'rag_survey.pdf',
-      status: 'complete',
-      tags: ['RESEARCH', 'AI'],
-      owner: 'intel.analyst',
-      date: '2026-04-18'
-    }
-  ];
+  async function handleFileUpload(event: Event) {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (!file) return;
 
-  function getStatusIcon(status: string) {
-    switch (status) {
-      case 'complete': return { icon: CheckCircle2, class: 'text-signal-green' };
-      case 'error': return { icon: AlertCircle, class: 'text-signal-red' };
-      default: return { icon: Clock, class: 'text-signal-orange' };
+    isUploading = true;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('classification', 'INTERNAL'); // Defaulting for simple UI
+
+    try {
+      const response = await fetch('/api/v1/documents', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          // Optimistically add to UI list
+          documents = [result.document, ...documents];
+        }
+      } else {
+        alert('Upload failed.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Upload failed.');
+    } finally {
+      isUploading = false;
+      if (fileInput) fileInput.value = '';
     }
   }
 </script>
 
-<div class="p-4 lg:p-8 space-y-6 h-full flex flex-col overflow-hidden">
-  <!-- Header -->
-  <div class="flex items-center justify-between">
+<div class="h-full flex flex-col pt-8 lg:p-8">
+  <!-- Header Control Region -->
+  <div class="flex flex-col md:flex-row md:items-center justify-between px-8 lg:px-0 mb-8 gap-4">
     <div>
-      <h2 class="text-xl font-bold text-foreground">Document <span class="text-signal-blue uppercase">Operations</span></h2>
-      <p class="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">Ingestion Queue & AI Classification Lab</p>
+      <h1 class="text-xl font-bold uppercase tracking-tight text-foreground flex items-center gap-2">
+        <FileText class="text-signal-blue" size={20} />
+        Intel / Documents
+      </h1>
+      <p class="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">Manage global knowledge fragments</p>
     </div>
-    <button class="flex items-center gap-2 px-4 py-2 bg-signal-blue text-white rounded-sm text-xs font-bold hover:bg-blue-500 transition-colors uppercase tracking-widest shadow-lg shadow-blue-900/20">
-      <FileUp size={16} />
-      Upload Intelligence
-    </button>
-  </div>
 
-  <!-- Stats Grid -->
-  <div class="grid grid-cols-3 gap-4">
-    <div class="p-4 border border-border bg-muted/20 rounded-sm">
-      <p class="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 font-bold">Total Vaulted</p>
-      <p class="text-2xl font-bold text-foreground font-mono">142</p>
-    </div>
-    <div class="p-4 border border-border bg-muted/20 rounded-sm">
-      <p class="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 font-bold">Active Ingestion</p>
-      <div class="flex items-center gap-2">
-        <p class="text-2xl font-bold text-signal-orange font-mono">3</p>
-        <span class="w-2 h-2 rounded-full bg-signal-orange animate-pulse"></span>
+    <div class="flex items-center gap-3">
+      <div class="relative group hidden sm:block">
+        <Search size={14} class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <input 
+          type="text" 
+          placeholder="FILTER FRAGMENTS..." 
+          class="bg-muted border border-border rounded-sm h-9 pl-9 pr-4 text-xs font-mono w-64 outline-none focus:border-signal-blue transition-colors group-hover:bg-muted/80 uppercase"
+        />
       </div>
-    </div>
-    <div class="p-4 border border-border bg-muted/20 rounded-sm">
-      <p class="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 font-bold">Storage Delta</p>
-      <p class="text-2xl font-bold text-signal-blue font-mono">+1.2 GB</p>
+
+      <button
+        onclick={() => fileInput?.click()}
+        class="h-9 px-4 bg-signal-blue text-white rounded-sm text-xs font-bold uppercase tracking-widest hover:bg-blue-600 transition-colors flex items-center gap-2 disabled:opacity-50"
+        disabled={isUploading}
+      >
+        {#if isUploading}
+          <div class="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          UPLOADING...
+        {:else}
+          <Upload size={14} />
+          UPLOAD
+        {/if}
+      </button>
+      <input type="file" bind:this={fileInput} class="hidden" onchange={handleFileUpload} />
     </div>
   </div>
 
-  <!-- Ingestion Table -->
-  <div class="flex-1 border border-border rounded-sm overflow-hidden flex flex-col bg-muted/10 backdrop-blur-sm">
-    <div class="overflow-x-auto">
-      <table class="w-full text-left border-collapse">
-        <thead>
-          <tr class="bg-muted/50 text-[10px] font-bold text-muted-foreground uppercase tracking-widest border-b border-border">
-            <th class="p-4">Resource Identifier</th>
-            <th class="p-4">Process Status</th>
-            <th class="p-4">Intelligence Tags (AI Suggested)</th>
-            <th class="p-4 text-right">Operations</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-border font-mono">
-          {#each mockDocs as doc}
-            {@const status = getStatusIcon(doc.status)}
-            <tr class="hover:bg-muted/30 transition-colors group">
-              <td class="p-4">
-                <div class="flex flex-col">
-                  <span class="text-xs font-bold text-foreground mb-1">{doc.name}</span>
-                  <span class="text-[9px] text-muted-foreground uppercase">{doc.owner} | {doc.date}</span>
-                </div>
-              </td>
-              <td class="p-4">
-                <div class="flex items-center gap-2 text-[10px] font-bold uppercase {status.class}">
-                  <status.icon size={12} class={doc.status === 'indexing' ? 'animate-spin' : ''} />
-                  {doc.status}
-                </div>
-              </td>
-              <td class="p-4">
-                <div class="flex flex-wrap gap-2">
-                  {#each doc.tags as tag}
-                    <span class="px-2 py-0.5 rounded-sm text-[9px] font-bold border 
-                      {tag.includes('?') ? 'bg-signal-blue/5 text-signal-blue border-signal-blue/20 italic cursor-help' : 'bg-muted border-border text-muted-foreground'}"
-                    >
-                      {tag}
-                    </span>
-                  {/each}
-                </div>
-              </td>
-              <td class="p-4 text-right">
-                <div class="flex justify-end gap-2">
-                  <button class="p-1.5 text-muted-foreground hover:text-signal-blue transition-colors rounded-sm hover:bg-muted">
-                    <CheckCircle2 size={16} />
-                  </button>
-                  <button class="p-1.5 text-muted-foreground hover:text-signal-red transition-colors rounded-sm hover:bg-muted">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
+  <!-- Document Grid / Table (Industrial Density) -->
+  <div class="flex-1 border-t border-border overflow-hidden flex flex-col -mx-8 lg:mx-0 lg:border">
+    <!-- Table Header -->
+    <div class="hidden sm:grid grid-cols-12 gap-4 items-center bg-muted/50 p-4 border-b border-border text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
+      <div class="col-span-5 md:col-span-6">Identifier</div>
+      <div class="col-span-3 lg:col-span-2">Classification</div>
+      <div class="col-span-3 lg:col-span-3">Timestamp Added</div>
+      <div class="col-span-1 text-right">Actions</div>
+    </div>
+
+    <!-- Table Body -->
+    <div class="flex-1 overflow-y-auto custom-scrollbar bg-background">
+      {#each documents as doc}
+        <div class="grid sm:grid-cols-12 gap-4 items-center p-4 border-b border-border/50 hover:bg-muted/20 transition-colors group">
+          
+          <div class="col-span-12 sm:col-span-5 md:col-span-6 flex items-center gap-3">
+            <FileText size={16} class="text-signal-blue shrink-0" />
+            <div>
+              <p class="text-sm font-mono text-foreground tracking-tight group-hover:text-signal-blue transition-colors cursor-pointer truncate">
+                {doc.name}
+              </p>
+              <p class="text-[9px] text-muted-foreground uppercase sm:hidden mt-1">{new Date(doc.createdAt).toISOString()}</p>
+            </div>
+          </div>
+
+          <div class="col-span-4 sm:col-span-3 lg:col-span-2 flex items-center">
+            <!-- Classification Badge -->
+            <span class="px-2 py-0.5 rounded-sm border text-[9px] font-bold uppercase tracking-widest whitespace-nowrap
+              {doc.classification === 'CONFIDENTIAL' ? 'bg-signal-orange/10 border-signal-orange/20 text-signal-orange' : 
+               doc.classification === 'PUBLIC' ? 'bg-signal-green/10 border-signal-green/20 text-signal-green' : 
+               'bg-muted border-border text-muted-foreground'}"
+            >
+              {doc.classification}
+            </span>
+          </div>
+
+          <div class="hidden sm:block col-span-3 lg:col-span-3">
+            <p class="text-[10px] font-mono text-muted-foreground">{new Date(doc.createdAt).toISOString()}</p>
+          </div>
+
+          <div class="absolute sm:relative right-4 sm:right-auto sm:col-span-1 flex justify-end">
+            <button class="p-2 text-muted-foreground hover:text-signal-red hover:bg-signal-red/10 rounded-sm transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-0">
+              <Trash2 size={14} />
+            </button>
+          </div>
+
+        </div>
+      {:else}
+        <div class="p-8 text-center border-b border-border/50">
+          <p class="text-xs text-muted-foreground font-mono uppercase tracking-widest">No intelligence documents stored.</p>
+        </div>
+      {/each}
     </div>
   </div>
 </div>
+
+<style>
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 2px;
+  }
+</style>

@@ -8,6 +8,12 @@
     user = { name: 'Super User', email: 'admin@hrag.local' },
     isOpen = true,
     onClose = () => {}
+  }: {
+    nodeName?: string;
+    isPrimary?: boolean;
+    user?: { name: string; email: string };
+    isOpen?: boolean;
+    onClose?: () => void;
   } = $props();
 
   const navItems = [

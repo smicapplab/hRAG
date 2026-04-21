@@ -71,7 +71,8 @@ export const handle: Handle = async ({ event, resolve }) => {
                 email: payload.email as string,
                 name: payload.name as string,
                 isAdmin: payload.isAdmin as boolean,
-                isCompliance: payload.isCompliance as boolean
+                isCompliance: payload.isCompliance as boolean,
+                groupIds: (payload.groups as string[]) || []
             };
         } catch (err) {
             // Invalid or expired token

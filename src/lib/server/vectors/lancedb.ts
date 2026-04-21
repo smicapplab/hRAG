@@ -128,7 +128,18 @@ export class LanceDBStore implements VectorStore {
         
         // Use LIKE with bounding commas for exact prefix match
         const accessConditions = tokens.map(t => `accessIds LIKE '%,${t},%'`).join(' OR ');
-        const filterStr = `ownerId = '${safeUserId}' OR ${accessConditions}`;
+        let filterStr = `ownerId = '${safeUserId}' OR ${accessConditions}`;
+
+        if (securityFilter.authorizedDocIds && securityFilter.authorizedDocIds.length > 0) {
+            // Cap at 5,000 to prevent engine overload
+            const cappedIds = securityFilter.authorizedDocIds.slice(0, 5000);
+            if (securityFilter.authorizedDocIds.length > 5000) {
+                console.warn(`[LanceDB] Search for user ${securityFilter.userId} capped at 5000 authorized IDs.`);
+            }
+            
+            const idList = cappedIds.map(id => `'${id.replace(/'/g, "''")}'`).join(', ');
+            filterStr = `(${filterStr}) OR docId IN (${idList})`;
+        }
 
         const results = await table.search(queryVector)
             .limit(limit)

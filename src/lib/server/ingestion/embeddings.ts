@@ -5,36 +5,45 @@ import { HuggingFaceTransformersEmbeddings } from '@langchain/community/embeddin
 import { env } from '$env/dynamic/private';
 import type { Embeddings } from '@langchain/core/embeddings';
 
+let providerInstance: Embeddings | null = null;
+
 export function getEmbeddingProvider(): Embeddings {
+    if (providerInstance) return providerInstance;
+    
     const provider = env.EMBEDDING_PROVIDER || 'local';
 
     switch (provider.toLowerCase()) {
         case 'ollama':
-            return new OllamaEmbeddings({
+            providerInstance = new OllamaEmbeddings({
                 model: env.OLLAMA_MODEL || 'nomic-embed-text',
                 baseUrl: env.OLLAMA_BASE_URL || 'http://localhost:11434',
             });
+            break;
             
         case 'openai':
             if (!env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is missing");
-            return new OpenAIEmbeddings({
+            providerInstance = new OpenAIEmbeddings({
                 apiKey: env.OPENAI_API_KEY,
                 modelName: env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small',
             });
+            break;
 
         case 'gemini':
             if (!env.GOOGLE_API_KEY) throw new Error("GOOGLE_API_KEY is missing");
-            return new GoogleGenerativeAIEmbeddings({
+            providerInstance = new GoogleGenerativeAIEmbeddings({
                 apiKey: env.GOOGLE_API_KEY,
                 model: env.GOOGLE_EMBEDDING_MODEL || 'text-embedding-004',
             });
+            break;
 
         case 'local':
         default:
-            return new HuggingFaceTransformersEmbeddings({
+            providerInstance = new HuggingFaceTransformersEmbeddings({
                 modelName: env.LOCAL_EMBEDDING_MODEL || 'Xenova/all-MiniLM-L6-v2',
             });
+            break;
     }
+    return providerInstance;
 }
 
 /**

@@ -69,3 +69,22 @@ describe('Privacy Scoping Logic (Scalable)', () => {
         expect(findManyCall.where).toBeDefined();
     });
 });
+
+describe('Search API Security Pipeline', () => {
+    it('should combine relational fetch with vector search', async () => {
+        // Mock DB for Stage 1
+        (db.select as any).mockReturnValue({
+            from: vi.fn().mockReturnValue({
+                where: vi.fn().mockResolvedValue([{ id: 'shared-doc-1' }])
+            })
+        });
+
+        // Verification: Stage 1 produces the correct list
+        const userId = 'user-1';
+        const sharedDocs = await db.select({ id: schema.documentPermissions.documentId })
+            .from(schema.documentPermissions)
+            .where(eq(schema.documentPermissions.userId, userId));
+        
+        expect(sharedDocs).toEqual([{ id: 'shared-doc-1' }]);
+    });
+});

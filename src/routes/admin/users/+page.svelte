@@ -2,13 +2,8 @@
 	import type { PageData } from './$types';
 	import HierarchyTree from '$lib/components/admin/HierarchyTree.svelte';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
-	import { Users, Shield, UserPlus, Filter, Database, ShieldAlert, Cpu } from 'lucide-svelte';
-
-	import { enhance } from '$app/forms';
-	import type { PageData } from './$types';
-	import HierarchyTree from '$lib/components/admin/HierarchyTree.svelte';
-	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import { Users, Shield, UserPlus, Filter, Database, ShieldAlert, Cpu, Plus } from 'lucide-svelte';
+	import { enhance } from '$app/forms';
 
 	let { data }: { data: PageData } = $props();
 
@@ -85,10 +80,10 @@
 				>
 					<input type="hidden" name="parentId" value={newGroupParentId} />
 					<input type="hidden" name="level" value={newGroupLevel} />
-					
 					<div class="space-y-2">
-						<label class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Group Name</label>
+						<label for="groupName" class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Group Name</label>
 						<input 
+							id="groupName"
 							type="text" 
 							name="name" 
 							bind:value={newGroupName}
@@ -168,12 +163,15 @@
 					onSelect={selectGroup} 
 					onAdd={initiateCreateGroup}
 					onDelete={(id) => {
-						deleteGroupForm.id.value = id;
+						const idInput = deleteGroupForm.elements.namedItem('id') as HTMLInputElement;
+						if (idInput) idInput.value = id;
 						deleteGroupForm.requestSubmit();
 					}}
 					onUpdate={(id, name) => {
-						updateGroupForm.id.value = id;
-						updateGroupForm.name.value = name;
+						const idInput = updateGroupForm.elements.namedItem('id') as HTMLInputElement;
+						const nameInput = updateGroupForm.elements.namedItem('name') as HTMLInputElement;
+						if (idInput) idInput.value = id;
+						if (nameInput) nameInput.value = name;
 						updateGroupForm.requestSubmit();
 					}}
 				/>
@@ -244,7 +242,7 @@
 					<div class="space-y-6">
 						<div class="flex items-center gap-4">
 							<div class="w-12 h-12 rounded-sm bg-muted flex items-center justify-center border border-border text-lg font-bold text-signal-blue uppercase">
-								{selectedUser.name.split(' ').map(n => n[0]).join('')}
+								{selectedUser.name.split(' ').map((n: string) => n[0]).join('')}
 							</div>
 							<div>
 								<h3 class="text-sm font-bold uppercase tracking-tight">{selectedUser.name}</h3>

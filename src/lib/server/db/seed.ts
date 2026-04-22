@@ -70,7 +70,8 @@ async function seedEssential() {
         if (!existing) {
             await db.insert(schema.classificationPolicies).values({
                 ...p,
-                id: crypto.randomUUID()
+                id: crypto.randomUUID(),
+                minRoleRequired: p.minRoleRequired as any
             });
             console.log(`[+] Policy created: ${p.code}`);
         }

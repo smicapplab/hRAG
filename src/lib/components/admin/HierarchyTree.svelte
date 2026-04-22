@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { FolderTree, ChevronRight, ChevronDown, Shield, MoreVertical, Users, Plus } from 'lucide-svelte';
+	import HierarchyTree from './HierarchyTree.svelte';
 
 	let { 
 		nodes, 
@@ -55,10 +56,18 @@
 			{/if}
 
 			<div 
+				role="button"
+				tabindex="0"
 				class="group flex items-center gap-2 p-2 rounded-sm border border-transparent hover:border-border hover:bg-muted/30 transition-all cursor-pointer"
 				onclick={() => {
 					onSelect(node.id);
 					if (node.children?.length > 0) toggle(node.id);
+				}}
+				onkeydown={(e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						onSelect(node.id);
+						if (node.children?.length > 0) toggle(node.id);
+					}
 				}}
 			>
 				{#if node.children?.length > 0}
@@ -143,7 +152,7 @@
 			<!-- Recursive Children -->
 			{#if node.children?.length > 0 && expanded[node.id]}
 				<div class="ml-9 mt-1">
-					<svelte:self 
+					<HierarchyTree 
 						nodes={node.children} 
 						level={level + 1} 
 						{onSelect} 

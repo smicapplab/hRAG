@@ -17,7 +17,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
     try {
         const body = await request.json();
-        let { query, limit = 5 } = body;
+        let { query, limit = 5, tags = [] } = body;
 
         if (!query || typeof query !== 'string') {
             return json({ error: 'Invalid query string' }, { status: 400 });
@@ -36,13 +36,29 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         
         const authorizedDocIds = sharedDocs.map(d => d.id);
 
+        // --- Tag-Based Filtering Overlay ---
+        let tagFilteredDocIds: string[] | null = null;
+        if (tags.length > 0) {
+            const tagResults = await db.select({ docId: schema.documentsToTags.documentId })
+                .from(schema.documentsToTags)
+                .innerJoin(schema.tags, eq(schema.documentsToTags.tagId, schema.tags.id))
+                .where(inArray(schema.tags.name, tags));
+            tagFilteredDocIds = tagResults.map(t => t.docId);
+        }
+
         // 3. Iron-Clad Vector Search (Pre-Filter)
         // VectorStore enforces Engine-Level unified ACL scoping
         const vectorStore = await getVectorStore();
+        
+        // Final pre-filter doc IDs: Intersection of authorized and tag-filtered
+        const combinedDocIds = tagFilteredDocIds 
+            ? authorizedDocIds.filter(id => tagFilteredDocIds?.includes(id))
+            : authorizedDocIds;
+
         const vectorResults = await vectorStore.similaritySearch(queryVector, limit, {
             userId,
             groupIds: groupIds || [],
-            authorizedDocIds
+            authorizedDocIds: tagFilteredDocIds ? tagFilteredDocIds : authorizedDocIds
         });
 
         if (vectorResults.length === 0) {

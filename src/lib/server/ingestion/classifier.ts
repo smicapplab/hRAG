@@ -1,0 +1,71 @@
+import { db } from '../db';
+import { classificationPolicies } from '../db/schema';
+import { getSetting } from '../admin/registry';
+
+/**
+ * hRAG Classification Engine
+ * Implements the "High-Water Mark" logic to ensure zero-trust security.
+ */
+
+export interface ClassificationResult {
+    policyCode: string;
+    severityWeight: number;
+    isOverride: boolean;
+}
+
+/**
+ * Resolves the final classification by comparing user input and AI assessment.
+ */
+export async function resolveClassification(
+    userPolicyCode: string,
+    aiPolicyCode: string
+): Promise<ClassificationResult> {
+    const policies = await db.select().from(classificationPolicies);
+    
+    const userPolicy = policies.find(p => p.code === userPolicyCode);
+    const aiPolicy = policies.find(p => p.code === aiPolicyCode);
+
+    if (!userPolicy) throw new Error(`Invalid user policy code: ${userPolicyCode}`);
+    if (!aiPolicy) throw new Error(`Invalid AI policy code: ${aiPolicyCode}`);
+
+    const isOverride = aiPolicy.severityWeight > userPolicy.severityWeight;
+    
+    return {
+        policyCode: isOverride ? aiPolicy.code : userPolicy.code,
+        severityWeight: Math.max(userPolicy.severityWeight, aiPolicy.severityWeight),
+        isOverride
+    };
+}
+
+/**
+ * Simple local regex classifier for initial security scanning.
+ */
+export async function localClassify(text: string): Promise<string> {
+    const rules = [
+        { pattern: /\b\d{3}-\d{2}-\d{4}\b/, policy: 'RESTRICTED', reason: 'SSN detected' },
+        { pattern: /\b(?:\d[ -]*?){13,16}\b/, policy: 'CONFIDENTIAL', reason: 'Credit Card detected' },
+        { pattern: /CONFIDENTIAL|SECRET|PROPRIETARY/i, policy: 'CONFIDENTIAL', reason: 'Keyword match' },
+        { pattern: /INTERNAL USE ONLY/i, policy: 'INTERNAL', reason: 'Keyword match' }
+    ];
+
+    for (const rule of rules) {
+        if (rule.pattern.test(text)) {
+            return rule.policy;
+        }
+    }
+
+    return 'INTERNAL'; // Default fallback
+}
+
+/**
+ * AI-assisted classification using Ollama or Cloud Providers.
+ * (Skeleton for Phase 2 integration)
+ */
+export async function aiClassify(text: string): Promise<string> {
+    const isAutoEnabled = await getSetting('classification.auto_enabled', true);
+    if (!isAutoEnabled) return 'INTERNAL';
+
+    // In a real implementation, this would call the configured LLM provider.
+    // For now, we fallback to the local classifier.
+    return localClassify(text);
+}

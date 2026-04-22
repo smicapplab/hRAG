@@ -40,7 +40,9 @@ export const classificationPolicies = sqliteTable('classification_policies', {
 	code: text('code').notNull().unique(), // e.g., 'CONFIDENTIAL'
 	displayName: text('display_name').notNull(),
 	minRoleRequired: text('min_role_required', { enum: ['VIEWER', 'EDITOR', 'MANAGER'] }).notNull().default('VIEWER'),
-	requiresAudit: integer('requires_audit', { mode: 'boolean' }).notNull().default(false)
+	requiresAudit: integer('requires_audit', { mode: 'boolean' }).notNull().default(false),
+	severityWeight: integer('severity_weight').notNull().default(1),
+	description: text('description')
 });
 
 export const documents = sqliteTable('documents', {
@@ -51,6 +53,9 @@ export const documents = sqliteTable('documents', {
 	groupId: text('group_id').references(() => groups.id, { onDelete: 'set null' }),
 	classification: text('classification').notNull().default('INTERNAL'),
 	ingestionStatus: text('ingestion_status', { enum: ['pending', 'processing', 'done', 'failed'] }).notNull().default('pending'),
+	aiClassification: text('ai_classification'),
+	aiOverride: integer('ai_override', { mode: 'boolean' }).notNull().default(false),
+	reviewStatus: text('review_status', { enum: ['PENDING', 'APPROVED', 'OVERRIDDEN'] }),
 	createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 	updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date())
 });
@@ -64,6 +69,21 @@ export const documentPermissions = sqliteTable('document_permissions', {
 });
 
 // --- Auditing (SOC2/GDPR) ---
+
+export const systemSettings = sqliteTable('system_settings', {
+	key: text('key').primaryKey(), // e.g., 'ingestion.max_file_size'
+	value: text('value').notNull(), // JSON stringified
+	updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+	updatedBy: text('updated_by').references(() => users.id, { onDelete: 'set null' })
+});
+
+export const nodeHeartbeats = sqliteTable('node_heartbeats', {
+	nodeId: text('node_id').primaryKey(),
+	hostname: text('hostname').notNull(),
+	isPrimary: integer('is_primary', { mode: 'boolean' }).notNull().default(false),
+	metrics: text('metrics').notNull(), // JSON string: { cpu, mem, lag }
+	lastSeen: integer('last_seen', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date())
+});
 
 export const auditLogs = sqliteTable('audit_logs', {
 	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),

@@ -15,6 +15,13 @@
       "when": 1776787092667,
       "tag": "0001_bored_impossible_man",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1776831348240,
+      "tag": "0002_awesome_roulette",
+      "breakpoints": true
     }
   ]
 }

@@ -2,6 +2,7 @@
 	import type { PageData } from './$types';
 	import { Settings, Shield, Zap, Lock, Database, Info, CheckCircle2, AlertTriangle, ChevronRight } from 'lucide-svelte';
 	import { enhance } from '$app/forms';
+	import { slide } from 'svelte/transition';
 
 	let { data }: { data: PageData } = $props();
 
@@ -317,27 +318,59 @@
 								</form>
 
 								<div class="grid grid-cols-3 gap-4 ml-4">
-									<button class="p-3 border {data.settings['classification.tier'] === 'local' ? 'border-signal-green bg-signal-green/5' : 'border-border bg-muted/30'} rounded-sm text-left group">
-										<div class="flex items-center justify-between mb-2">
-											<span class="text-[10px] font-bold uppercase tracking-widest">Local WASM</span>
-											<div class="w-2 h-2 rounded-full bg-signal-green"></div>
-										</div>
-										<p class="text-[8px] text-muted-foreground uppercase leading-tight">Private-by-default. Zero data leaves the cluster.</p>
-									</button>
-									<button class="p-3 border {data.settings['classification.tier'] === 'ollama' ? 'border-signal-blue bg-signal-blue/5' : 'border-border bg-muted/30'} rounded-sm text-left group">
-										<div class="flex items-center justify-between mb-2">
-											<span class="text-[10px] font-bold uppercase tracking-widest">Ollama Sidecar</span>
-											<div class="w-2 h-2 rounded-full bg-signal-blue"></div>
-										</div>
-										<p class="text-[8px] text-muted-foreground uppercase leading-tight">On-premise GPU acceleration. High precision.</p>
-									</button>
-									<button class="p-3 border {data.settings['classification.tier'] === 'cloud' ? 'border-signal-red bg-signal-red/5' : 'border-border bg-muted/30'} rounded-sm text-left group">
-										<div class="flex items-center justify-between mb-2">
-											<span class="text-[10px] font-bold uppercase tracking-widest">Cloud AI</span>
-											<div class="w-2 h-2 rounded-full bg-signal-red"></div>
-										</div>
-										<p class="text-[8px] text-signal-red font-bold uppercase leading-tight">External Data Transfer. Maximum intelligence.</p>
-									</button>
+									<form method="POST" action="?/updateSetting" use:enhance>
+										<input type="hidden" name="key" value="classification.tier" />
+										<input type="hidden" name="value" value="local" />
+										<button class="w-full h-full p-3 border {data.settings['classification.tier'] === 'local' ? 'border-signal-green bg-signal-green/5' : 'border-border bg-muted/30'} rounded-sm text-left group transition-colors hover:border-signal-green/50">
+											<div class="flex items-center justify-between mb-2">
+												<span class="text-[10px] font-bold uppercase tracking-widest">Local WASM</span>
+												{#if data.settings['classification.tier'] === 'local'}
+													<div class="w-2 h-2 rounded-full bg-signal-green relative">
+														<div class="absolute inset-0 bg-signal-green rounded-full animate-ping opacity-50"></div>
+													</div>
+												{:else}
+													<div class="w-2 h-2 rounded-full border border-muted-foreground opacity-50"></div>
+												{/if}
+											</div>
+											<p class="text-[8px] text-muted-foreground uppercase leading-tight">Private-by-default. Zero data leaves the cluster.</p>
+										</button>
+									</form>
+
+									<form method="POST" action="?/updateSetting" use:enhance>
+										<input type="hidden" name="key" value="classification.tier" />
+										<input type="hidden" name="value" value="ollama" />
+										<button class="w-full h-full p-3 border {data.settings['classification.tier'] === 'ollama' ? 'border-signal-blue bg-signal-blue/5' : 'border-border bg-muted/30'} rounded-sm text-left group transition-colors hover:border-signal-blue/50">
+											<div class="flex items-center justify-between mb-2">
+												<span class="text-[10px] font-bold uppercase tracking-widest">Ollama Sidecar</span>
+												{#if data.settings['classification.tier'] === 'ollama'}
+													<div class="w-2 h-2 rounded-full bg-signal-blue relative">
+														<div class="absolute inset-0 bg-signal-blue rounded-full animate-ping opacity-50"></div>
+													</div>
+												{:else}
+													<div class="w-2 h-2 rounded-full border border-muted-foreground opacity-50"></div>
+												{/if}
+											</div>
+											<p class="text-[8px] text-muted-foreground uppercase leading-tight">On-premise GPU acceleration. High precision.</p>
+										</button>
+									</form>
+
+									<form method="POST" action="?/updateSetting" use:enhance>
+										<input type="hidden" name="key" value="classification.tier" />
+										<input type="hidden" name="value" value="cloud" />
+										<button class="w-full h-full p-3 border {data.settings['classification.tier'] === 'cloud' ? 'border-signal-red bg-signal-red/5' : 'border-border bg-muted/30'} rounded-sm text-left group transition-colors hover:border-signal-red/50">
+											<div class="flex items-center justify-between mb-2">
+												<span class="text-[10px] font-bold uppercase tracking-widest">Cloud AI</span>
+												{#if data.settings['classification.tier'] === 'cloud'}
+													<div class="w-2 h-2 rounded-full bg-signal-red relative">
+														<div class="absolute inset-0 bg-signal-red rounded-full animate-ping opacity-50"></div>
+													</div>
+												{:else}
+													<div class="w-2 h-2 rounded-full border border-muted-foreground opacity-50"></div>
+												{/if}
+											</div>
+											<p class="text-[8px] text-signal-red font-bold uppercase leading-tight">External Data Transfer. Maximum intelligence.</p>
+										</button>
+									</form>
 								</div>
 							</div>
 						</div>

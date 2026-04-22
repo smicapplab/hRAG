@@ -90,7 +90,6 @@
 							placeholder="e.g., QUANTUM SYSTEMS"
 							class="w-full bg-neutral-950 border border-border rounded-sm p-3 text-sm font-mono outline-none focus:border-signal-blue transition-colors"
 							required
-							autofocus
 						/>
 					</div>
 

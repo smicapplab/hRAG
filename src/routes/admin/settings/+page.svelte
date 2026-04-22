@@ -344,8 +344,88 @@
 										class="w-full border border-border bg-muted py-3 text-[9px] font-bold uppercase transition-all hover:bg-signal-blue hover:text-white"
 										>Update</button
 									>
-								</div>
-							</form>
+								</form>
+
+								{#if data.settings['embeddings.provider'] === 'openai'}
+									<div class="ml-4 space-y-4 border-l-2 border-signal-blue bg-signal-blue/5 p-4" transition:slide>
+										<h5 class="text-[9px] font-bold tracking-widest text-signal-blue uppercase">OpenAI Integration Config</h5>
+										<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+											<form method="POST" action="?/updateSetting" use:enhance class="space-y-1">
+												<input type="hidden" name="key" value="embeddings.openai.key" />
+												<label for="openai-key" class="text-[8px] font-bold text-muted-foreground uppercase">API Key (Registry Overwrites ENV)</label>
+												<div class="flex gap-2">
+													<input id="openai-key" name="value" type="password" placeholder="sk-..." value={data.settings['embeddings.openai.key'] || ''} class="flex-1 border border-border bg-neutral-950 p-2 font-mono text-[10px] outline-none focus:border-signal-blue" />
+													<button class="px-3 bg-muted border border-border text-[8px] font-bold uppercase hover:bg-signal-blue hover:text-white">Save</button>
+												</div>
+											</form>
+											<form method="POST" action="?/updateSetting" use:enhance class="space-y-1">
+												<input type="hidden" name="key" value="embeddings.openai.model" />
+												<label for="openai-model" class="text-[8px] font-bold text-muted-foreground uppercase">Embedding Model</label>
+												<div class="flex gap-2">
+													<input id="openai-model" name="value" type="text" value={data.settings['embeddings.openai.model'] || 'text-embedding-3-small'} class="flex-1 border border-border bg-neutral-950 p-2 font-mono text-[10px] outline-none focus:border-signal-blue" />
+													<button class="px-3 bg-muted border border-border text-[8px] font-bold uppercase hover:bg-signal-blue hover:text-white">Save</button>
+												</div>
+											</form>
+										</div>
+									</div>
+								{:else if data.settings['embeddings.provider'] === 'google'}
+									<div class="ml-4 space-y-4 border-l-2 border-signal-blue bg-signal-blue/5 p-4" transition:slide>
+										<h5 class="text-[9px] font-bold tracking-widest text-signal-blue uppercase">Google GenAI Integration Config</h5>
+										<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+											<form method="POST" action="?/updateSetting" use:enhance class="space-y-1">
+												<input type="hidden" name="key" value="embeddings.google.key" />
+												<label for="google-key" class="text-[8px] font-bold text-muted-foreground uppercase">API Key</label>
+												<div class="flex gap-2">
+													<input id="google-key" name="value" type="password" placeholder="AIza..." value={data.settings['embeddings.google.key'] || ''} class="flex-1 border border-border bg-neutral-950 p-2 font-mono text-[10px] outline-none focus:border-signal-blue" />
+													<button class="px-3 bg-muted border border-border text-[8px] font-bold uppercase hover:bg-signal-blue hover:text-white">Save</button>
+												</div>
+											</form>
+											<form method="POST" action="?/updateSetting" use:enhance class="space-y-1">
+												<input type="hidden" name="key" value="embeddings.google.model" />
+												<label for="google-model" class="text-[8px] font-bold text-muted-foreground uppercase">Embedding Model</label>
+												<div class="flex gap-2">
+													<input id="google-model" name="value" type="text" value={data.settings['embeddings.google.model'] || 'text-embedding-004'} class="flex-1 border border-border bg-neutral-950 p-2 font-mono text-[10px] outline-none focus:border-signal-blue" />
+													<button class="px-3 bg-muted border border-border text-[8px] font-bold uppercase hover:bg-signal-blue hover:text-white">Save</button>
+												</div>
+											</form>
+										</div>
+									</div>
+								{:else if data.settings['embeddings.provider'] === 'ollama'}
+									<div class="ml-4 space-y-4 border-l-2 border-signal-blue bg-signal-blue/5 p-4" transition:slide>
+										<h5 class="text-[9px] font-bold tracking-widest text-signal-blue uppercase">Ollama Local GPU Config</h5>
+										<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+											<form method="POST" action="?/updateSetting" use:enhance class="space-y-1">
+												<input type="hidden" name="key" value="embeddings.ollama.url" />
+												<label for="ollama-url" class="text-[8px] font-bold text-muted-foreground uppercase">Base URL</label>
+												<div class="flex gap-2">
+													<input id="ollama-url" name="value" type="text" value={data.settings['embeddings.ollama.url'] || 'http://localhost:11434'} class="flex-1 border border-border bg-neutral-950 p-2 font-mono text-[10px] outline-none focus:border-signal-blue" />
+													<button class="px-3 bg-muted border border-border text-[8px] font-bold uppercase hover:bg-signal-blue hover:text-white">Save</button>
+												</div>
+											</form>
+											<form method="POST" action="?/updateSetting" use:enhance class="space-y-1">
+												<input type="hidden" name="key" value="embeddings.ollama.model" />
+												<label for="ollama-model" class="text-[8px] font-bold text-muted-foreground uppercase">Model Name</label>
+												<div class="flex gap-2">
+													<input id="ollama-model" name="value" type="text" value={data.settings['embeddings.ollama.model'] || 'nomic-embed-text'} class="flex-1 border border-border bg-neutral-950 p-2 font-mono text-[10px] outline-none focus:border-signal-blue" />
+													<button class="px-3 bg-muted border border-border text-[8px] font-bold uppercase hover:bg-signal-blue hover:text-white">Save</button>
+												</div>
+											</form>
+										</div>
+									</div>
+								{:else if data.settings['embeddings.provider'] === 'local'}
+									<div class="ml-4 space-y-4 border-l-2 border-signal-blue bg-signal-blue/5 p-4" transition:slide>
+										<h5 class="text-[9px] font-bold tracking-widest text-signal-blue uppercase">Local WASM Optimization</h5>
+										<form method="POST" action="?/updateSetting" use:enhance class="space-y-1">
+											<input type="hidden" name="key" value="embeddings.local.model" />
+											<label for="local-model" class="text-[8px] font-bold text-muted-foreground uppercase">Transformers Model (HuggingFace ID)</label>
+											<div class="flex gap-2">
+												<input id="local-model" name="value" type="text" value={data.settings['embeddings.local.model'] || 'Xenova/all-MiniLM-L6-v2'} class="flex-1 border border-border bg-neutral-950 p-2 font-mono text-[10px] outline-none focus:border-signal-blue" />
+												<button class="px-3 bg-muted border border-border text-[8px] font-bold uppercase hover:bg-signal-blue hover:text-white">Save</button>
+											</div>
+										</form>
+									</div>
+								{/if}
+							</div>
 
 							<form
 								method="POST"

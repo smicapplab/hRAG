@@ -71,6 +71,9 @@ export async function getVectorStore(): Promise<VectorStore> {
         if (provider === 'lancedb') {
             const { LanceDBStore } = await import('./lancedb');
             instance = new LanceDBStore();
+        } else if (provider === 'pgvector') {
+            const { PgVectorStore } = await import('./pgvector');
+            instance = new PgVectorStore();
         } else {
             throw new Error(`Unknown provider: ${provider}`);
         }

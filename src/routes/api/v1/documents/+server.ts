@@ -41,8 +41,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         });
 
         if (policy) {
-            const userRole = groupId ? (locals.user.groupRoles[groupId] || 'VIEWER') : 'MANAGER'; 
-            
+            const userRole = groupId ? (locals.user.groupRoles[groupId] || 'VIEWER') : 'MANAGER';
             const effectiveRoleWeight = groupId ? ROLE_WEIGHT[userRole as Role] || 0 : 3; // Owner is MANAGER (3)
             const requiredWeight = ROLE_WEIGHT[policy.minRoleRequired as Role] || 0;
 
@@ -50,6 +49,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                 return json({
                     error: `Insufficient clearance for ${classification} classification. Required: ${policy.minRoleRequired}`
                 }, { status: 403 });
+            }
+
+            if (policy.requiresAudit) {
+                await db.insert(schema.auditLogs).values({
+                    userId: locals.user.id,
+                    event: 'CLASSIFIED_DOCUMENT_ACCESSED',
+                    metadata: JSON.stringify({ fileName: file.name, classification })
+                });
             }
         }
 

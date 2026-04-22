@@ -56,6 +56,14 @@ export const GET: RequestHandler = async ({ params, locals }) => {
             if (effectiveRoleWeight < requiredWeight) {
                 throw error(403, `Insufficient clearance for ${doc.classification} classification. Required: ${policy.minRoleRequired}`);
             }
+
+            if (policy.requiresAudit) {
+                await db.insert(schema.auditLogs).values({
+                    userId: locals.user.id,
+                    event: 'CLASSIFIED_DOCUMENT_ACCESSED',
+                    metadata: JSON.stringify({ docId: doc.id, fileName: doc.name, classification: doc.classification })
+                });
+            }
         }
 
         // 3. Generate Pre-signed 60s TTL URL

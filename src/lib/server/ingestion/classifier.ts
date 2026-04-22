@@ -69,3 +69,31 @@ export async function aiClassify(text: string): Promise<string> {
     // For now, we fallback to the local classifier.
     return localClassify(text);
 }
+
+/**
+ * Suggests multi-label discovery tags based on content.
+ */
+export async function suggestTags(text: string): Promise<string[]> {
+    const isAutoEnabled = await getSetting('classification.auto_enabled', true);
+    if (!isAutoEnabled) return [];
+
+    const tier = await getSetting('classification.tier', 'local');
+    
+    // For now, we use local keywords. Later, this will call Ollama/Cloud.
+    const suggestions: string[] = [];
+    
+    const keywords = [
+        { tag: 'FINANCE', patterns: [/revenue/i, /budget/i, /invoice/i, /financial/i] },
+        { tag: 'LEGAL', patterns: [/contract/i, /agreement/i, /compliance/i, /terms/i] },
+        { tag: 'TECH', patterns: [/engineering/i, /architecture/i, /source code/i, /api/i] },
+        { tag: 'HR', patterns: [/personnel/i, /hiring/i, /employee/i, /payroll/i] }
+    ];
+
+    for (const item of keywords) {
+        if (item.patterns.some(p => p.test(text))) {
+            suggestions.push(item.tag);
+        }
+    }
+
+    return suggestions;
+}

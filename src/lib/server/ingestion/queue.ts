@@ -1,6 +1,6 @@
 import { extractText, chunkText } from './extractor';
 import { generateEmbeddings } from './embeddings';
-import { aiClassify, resolveClassification } from './classifier';
+import { aiClassify, resolveClassification, suggestTags } from './classifier';
 import { getVectorStore } from '../vectors';
 import { db } from '../db';
 import * as schema from '../db/schema';
@@ -108,7 +108,24 @@ class IngestionQueueManager {
             });
         }
 
-        // 3. Chunking
+        // 3. Discovery Tagging
+        console.log(`[Ingestion] Scanning for discovery tags...`);
+        const tags = await suggestTags(text.slice(0, 10000));
+        for (const tagName of tags) {
+            // Ensure tag exists
+            await db.insert(schema.tags)
+                .values({ id: crypto.randomUUID(), name: tagName, isAiGenerated: true })
+                .onConflictDoNothing();
+            
+            const tagRecord = await db.query.tags.findFirst({ where: eq(schema.tags.name, tagName) });
+            if (tagRecord) {
+                await db.insert(schema.documentsToTags)
+                    .values({ documentId: job.docId, tagId: tagRecord.id })
+                    .onConflictDoNothing();
+            }
+        }
+
+        // 4. Chunking
         console.log(`[Ingestion] Chunking text...`);
         const chunks = await chunkText(text);
 

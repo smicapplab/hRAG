@@ -1,5 +1,6 @@
 import { extractText, chunkText } from './extractor';
 import { generateEmbeddings } from './embeddings';
+import { aiClassify, resolveClassification } from './classifier';
 import { getVectorStore } from '../vectors';
 import { db } from '../db';
 import * as schema from '../db/schema';
@@ -16,6 +17,7 @@ export interface IngestionJob {
     groupIds: string[];
     isPublic: boolean;
     localFilePath: string; // The file temporarily downloaded from S3
+    userClassification?: string;
 }
 
 class IngestionQueueManager {
@@ -73,7 +75,40 @@ class IngestionQueueManager {
             throw new Error("No text could be extracted from document.");
         }
 
-        // 2. Chunking
+        // 2. Auto-Classification (High-Water Mark Logic)
+        console.log(`[Ingestion] Performing Security Scan...`);
+        const aiPolicyCode = await aiClassify(text.slice(0, 10000)); // Sample for performance
+        const userPolicyCode = job.userClassification || 'INTERNAL';
+        
+        const { policyCode, isOverride } = await resolveClassification(userPolicyCode, aiPolicyCode);
+
+        // Update document with final security classification
+        await db.update(schema.documents)
+            .set({ 
+                classification: policyCode,
+                aiClassification: aiPolicyCode,
+                aiOverride: isOverride,
+                reviewStatus: isOverride ? 'PENDING' : 'APPROVED',
+                updatedAt: new Date()
+            })
+            .where(eq(schema.documents.id, job.docId));
+
+        if (isOverride) {
+            console.log(`[!] Security Alert: AI Override triggered for ${job.docId}. Locked to ${policyCode}.`);
+            // Add audit log entry
+            await db.insert(schema.auditLogs).values({
+                userId: job.ownerId,
+                event: 'SECURITY_OVERRIDE_TRIGGERED',
+                metadata: JSON.stringify({
+                    resourceId: job.docId,
+                    userPolicy: userPolicyCode,
+                    aiPolicy: aiPolicyCode,
+                    reason: 'AI detected higher sensitivity than user input.'
+                })
+            });
+        }
+
+        // 3. Chunking
         console.log(`[Ingestion] Chunking text...`);
         const chunks = await chunkText(text);
 

@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db';
 import * as schema from '$lib/server/db/schema';
+import { eq } from 'drizzle-orm';
 import { s3, ensureBucket } from '$lib/server/security/s3';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { ingestionQueue } from '$lib/server/ingestion/queue';
@@ -31,6 +32,27 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
         if (!file) {
             return json({ error: 'No file provided' }, { status: 400 });
+        }
+
+        // 1.5. Policy Enforcement (Classification Check)
+        const policy = await db.query.classificationPolicies.findFirst({
+            where: eq(schema.classificationPolicies.code, classification)
+        });
+
+        if (policy) {
+            const { ROLE_WEIGHT } = await import('$lib/server/auth/roles');
+            const userRole = groupId ? (locals.user.groupRoles[groupId] || 'VIEWER') : 'MANAGER'; // Default to MANAGER for personal uploads if no group? Or check global? 
+            // In hRAG, owner is MANAGER of their own document. 
+            // However, we check against the target group if provided.
+
+            const effectiveRoleWeight = groupId ? ROLE_WEIGHT[userRole as any] || 0 : 3; // Owner is MANAGER (3)
+            const requiredWeight = ROLE_WEIGHT[policy.minRoleRequired as any] || 0;
+
+            if (effectiveRoleWeight < requiredWeight) {
+                return json({
+                    error: `Insufficient clearance for ${classification} classification. Required: ${policy.minRoleRequired}`
+                }, { status: 403 });
+            }
         }
 
         // 2. Stateless Storage: S3 Upload

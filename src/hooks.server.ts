@@ -109,7 +109,19 @@ if (process.env.NODE_ENV !== 'test') {
  * Auth Middleware
  * Enforces "Iron-Clad" isolation and the "Authorization Sandwich".
  */
+import { getSetting } from '$lib/server/admin/registry';
+// ... other imports
+
 export const handle: Handle = async ({ event, resolve }) => {
+    // 1. Maintenance Mode Check
+    const maintenanceMode = await getSetting('system.maintenance_mode', false);
+    if (maintenanceMode && !event.url.pathname.startsWith('/admin')) {
+        return new Response(JSON.stringify({ error: 'Service under maintenance' }), {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+
     const token = event.cookies.get('jwt');
     const apiKey = event.request.headers.get('x-api-key');
 

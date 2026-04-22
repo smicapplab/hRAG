@@ -6,6 +6,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import pkg from 'pg';
 const { Pool } = pkg;
 import type { VectorStore, VectorDocument, SecurityFilter } from './index';
+import { getSetting } from '../admin/registry';
 
 /**
  * Enterprise PgVector Store
@@ -17,7 +18,11 @@ export class PgVectorStore implements VectorStore {
     private tableName: string = 'vectors';
 
     async initialize(): Promise<void> {
-        const url = process.env.DATABASE_URL; // Or registry setting
+        // Retrieve connection string from registry with env fallback
+        const url = await getSetting('vectors.pg.url', process.env.VECTOR_DATABASE_URL || process.env.DATABASE_URL);
+        
+        if (!url) throw new Error('No connection string configured for PgVectorStore.');
+        
         this.pool = new Pool({ connectionString: url });
         this.db = drizzle(this.pool);
         
@@ -25,7 +30,6 @@ export class PgVectorStore implements VectorStore {
         await this.pool.query('CREATE EXTENSION IF NOT EXISTS vector');
         
         // Define dynamic table
-        // Note: In production, we'd use a more robust schema management
         await this.pool.query(`
             CREATE TABLE IF NOT EXISTS ${this.tableName} (
                 id UUID PRIMARY KEY,

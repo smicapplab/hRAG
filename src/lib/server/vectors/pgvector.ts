@@ -45,20 +45,31 @@ export class PgVectorStore implements VectorStore {
 
     async addDocuments(documents: VectorDocument[]): Promise<void> {
         for (const doc of documents) {
-            await this.db.insert(this.tableName as any).values({
-                id: doc.id,
-                doc_id: doc.docId,
-                text: doc.text,
-                vector: JSON.stringify(doc.vector),
-                owner_id: doc.ownerId,
-                access_ids: doc.accessIds,
-                metadata: doc.metadata
-            });
+            await this.pool.query(`
+                INSERT INTO ${this.tableName} (id, doc_id, text, vector, owner_id, access_ids, metadata)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                ON CONFLICT (id) DO UPDATE SET
+                    doc_id = EXCLUDED.doc_id,
+                    text = EXCLUDED.text,
+                    vector = EXCLUDED.vector,
+                    owner_id = EXCLUDED.owner_id,
+                    access_ids = EXCLUDED.access_ids,
+                    metadata = EXCLUDED.metadata
+            `, [
+                doc.id,
+                doc.docId,
+                doc.text,
+                `[${doc.vector.join(',')}]`,
+                doc.ownerId,
+                doc.accessIds,
+                JSON.stringify(doc.metadata)
+            ]);
         }
     }
 
     async deleteDocuments(docIds: string[]): Promise<void> {
-        await this.db.delete(this.tableName as any).where(inArray(this.tableName.doc_id, docIds));
+        if (docIds.length === 0) return;
+        await this.pool.query(`DELETE FROM ${this.tableName} WHERE doc_id = ANY($1)`, [docIds]);
     }
 
     async similaritySearch(
@@ -68,7 +79,9 @@ export class PgVectorStore implements VectorStore {
     ): Promise<VectorDocument[]> {
         // Build ACL filter: (ownerId = ? OR accessIds && ?)
         // Using pgvector cosine distance operator <=>
-        const accessFilter = `access_ids && ARRAY[${securityFilter.groupIds.map(g => `'g:${g}'`).join(',')}]::text[]`;
+        const accessFilter = securityFilter.groupIds.length > 0 
+            ? `access_ids && ARRAY[${securityFilter.groupIds.map((_, i) => `$${i + 4}`).join(',')}]::text[]`
+            : 'FALSE';
         
         const query = `
             SELECT *, 1 - (vector <=> $1::vector) as distance
@@ -78,13 +91,20 @@ export class PgVectorStore implements VectorStore {
             LIMIT $3
         `;
 
-        const { rows } = await this.pool.query(query, [JSON.stringify(queryVector), securityFilter.userId, limit]);
+        const params = [
+            `[${queryVector.join(',')}]`, 
+            securityFilter.userId, 
+            limit,
+            ...securityFilter.groupIds.map(g => `g:${g}`)
+        ];
+
+        const { rows } = await this.pool.query(query, params);
         
         return rows.map((row: any) => ({
             id: row.id,
             docId: row.doc_id,
             text: row.text,
-            vector: row.vector,
+            vector: row.vector ? row.vector.slice(1, -1).split(',').map(Number) : [],
             ownerId: row.owner_id,
             accessIds: row.access_ids,
             metadata: row.metadata,
@@ -93,8 +113,25 @@ export class PgVectorStore implements VectorStore {
     }
 
     async updateAccess(docId: string, accessIds: string[]): Promise<void> {
-        await this.db.update(this.tableName as any)
-            .set({ access_ids: accessIds })
-            .where(eq(this.tableName.doc_id, docId));
+        await this.pool.query(`UPDATE ${this.tableName} SET access_ids = $1 WHERE doc_id = $2`, [accessIds, docId]);
+    }
+
+    async scan(callback: (documents: VectorDocument[]) => Promise<void>): Promise<void> {
+        const { rows } = await this.pool.query(`SELECT * FROM ${this.tableName}`);
+        
+        const chunkSize = 100;
+        for (let i = 0; i < rows.length; i += chunkSize) {
+            const chunk = rows.slice(i, i + chunkSize);
+            const mapped = chunk.map((row: any) => ({
+                id: row.id,
+                docId: row.doc_id,
+                text: row.text,
+                vector: row.vector ? row.vector.slice(1, -1).split(',').map(Number) : [],
+                ownerId: row.owner_id,
+                accessIds: row.access_ids,
+                metadata: row.metadata
+            }));
+            await callback(mapped);
+        }
     }
 }

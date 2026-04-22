@@ -50,6 +50,12 @@ export interface VectorStore {
      * This is used to synchronize permissions from the relational database.
      */
     updateAccess(docId: string, accessIds: string[]): Promise<void>;
+
+    /**
+     * Iterate through all documents in the vector store for migration.
+     * @param callback Function called for each chunk of documents.
+     */
+    scan(callback: (documents: VectorDocument[]) => Promise<void>): Promise<void>;
 }
 
 let storeInstance: VectorStore | null = null;

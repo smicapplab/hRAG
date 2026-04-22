@@ -21,6 +21,7 @@
 		"db:seed:essential": "tsx src/lib/server/db/seed.ts --essential",
 		"db:seed:demo": "tsx src/lib/server/db/seed.ts --demo",
 		"db:seal": "tsx scripts/seal-secret.ts",
+		"hrag:update": "tsx scripts/update.ts",
 		"s3:ensure": "tsx scripts/ensure-bucket.ts"
 	},
 	"devDependencies": {

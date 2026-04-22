@@ -165,4 +165,31 @@ export class LanceDBStore implements VectorStore {
             _distance: row._distance as number | undefined
         }));
     }
+
+    async scan(callback: (documents: VectorDocument[]) => Promise<void>): Promise<void> {
+        if (!this.db) await this.initialize();
+        const tableNames = await this.db!.tableNames();
+        if (!tableNames.includes(this.tableName)) return;
+
+        const table = await this.db!.openTable(this.tableName);
+        
+        // LanceDB scan returns a Query object that we can iterate
+        const results = await table.query().toArray();
+        
+        // Chunk the results to avoid memory pressure in callback
+        const chunkSize = 100;
+        for (let i = 0; i < results.length; i += chunkSize) {
+            const chunk = results.slice(i, i + chunkSize);
+            const mapped = chunk.map(row => ({
+                id: row.id as string,
+                docId: row.docId as string,
+                text: row.text as string,
+                vector: row.vector as number[],
+                ownerId: row.ownerId as string,
+                accessIds: (row.accessIds as string).split(',').filter(Boolean),
+                metadata: JSON.parse((row.metadata as string) || '{}')
+            }));
+            await callback(mapped);
+        }
+    }
 }

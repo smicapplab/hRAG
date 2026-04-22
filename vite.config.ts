@@ -5,6 +5,10 @@ import { sveltekit } from '@sveltejs/kit/vite';
 
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
+	ssr: {
+		noExternal: [],
+		external: ['@libsql/client', '@lancedb/lancedb', 'drizzle-orm', 'dotenv']
+	},
 	test: {
 		expect: { requireAssertions: true },
 		projects: [

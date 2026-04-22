@@ -1,8 +1,8 @@
 import { error, redirect, fail } from '@sveltejs/kit';
-import type { PageServerLoad } from './$types';
+import type { PageServerLoad, Actions } from './$types';
 import { db } from '$lib/server/db';
 import * as schema from '$lib/server/db/schema';
-import { eq, count, and } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 export const load: PageServerLoad = async ({ locals }) => {
     // 1. Guard: Only Admins can access the Control Plane
@@ -63,9 +63,10 @@ export const load: PageServerLoad = async ({ locals }) => {
     }
 };
 
-export const actions = {
+export const actions: Actions = {
     createGroup: async ({ request, locals }) => {
         if (!locals.user?.isAdmin) throw error(403, 'Forbidden');
+        const user = locals.user;
         
         const data = await request.formData();
         const name = data.get('name') as string;
@@ -97,7 +98,7 @@ export const actions = {
 
         // Audit Logging
         await db.insert(schema.auditLogs).values({
-            userId: locals.user.id,
+            userId: user.id,
             event: 'GROUP_CREATED',
             metadata: JSON.stringify({ newId, name, parentId, level, path })
         });
@@ -107,6 +108,7 @@ export const actions = {
 
     updateGroup: async ({ request, locals }) => {
         if (!locals.user?.isAdmin) throw error(403, 'Forbidden');
+        const user = locals.user;
         
         const data = await request.formData();
         const id = data.get('id') as string;
@@ -123,7 +125,7 @@ export const actions = {
 
         // Audit Logging
         await db.insert(schema.auditLogs).values({
-            userId: locals.user.id,
+            userId: user.id,
             event: 'GROUP_UPDATED',
             metadata: JSON.stringify({ id, oldName: oldGroup.name, newName: name })
         });
@@ -133,6 +135,7 @@ export const actions = {
 
     deleteGroup: async ({ request, locals }) => {
         if (!locals.user?.isAdmin) throw error(403, 'Forbidden');
+        const user = locals.user;
         
         const data = await request.formData();
         const id = data.get('id') as string;
@@ -143,7 +146,7 @@ export const actions = {
 
         // Audit Logging
         await db.insert(schema.auditLogs).values({
-            userId: locals.user.id,
+            userId: user.id,
             event: 'GROUP_DELETED',
             metadata: JSON.stringify({ id })
         });
@@ -153,6 +156,7 @@ export const actions = {
 
     updateRole: async ({ request, locals }) => {
         if (!locals.user?.isAdmin) throw error(403, 'Forbidden');
+        const adminUser = locals.user;
         
         const data = await request.formData();
         const userId = data.get('userId') as string;
@@ -162,7 +166,7 @@ export const actions = {
         if (!userId || !groupId || !role) return fail(400, { message: 'Missing required fields' });
 
         await db.update(schema.usersToGroups)
-            .set({ role, grantedBy: locals.user.id, grantedAt: new Date() })
+            .set({ role, grantedBy: adminUser.id, grantedAt: new Date() })
             .where(and(
                 eq(schema.usersToGroups.userId, userId),
                 eq(schema.usersToGroups.groupId, groupId)
@@ -178,9 +182,9 @@ export const actions = {
 
         // Audit Logging
         await db.insert(schema.auditLogs).values({
-            userId: locals.user.id,
+            userId: adminUser.id,
             event: 'ROLE_UPDATED',
-            metadata: JSON.stringify({ userId, groupId, role, grantedBy: locals.user.id })
+            metadata: JSON.stringify({ userId, groupId, role, grantedBy: adminUser.id })
         });
 
         return { success: true };

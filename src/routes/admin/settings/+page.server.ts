@@ -33,6 +33,8 @@ export const actions: Actions = {
     },
 
     updateSetting: async ({ request, locals }) => {
+        if (!locals.user) return fail(401);
+        
         const data = await request.formData();
         const key = data.get('key') as string;
         const value = data.get('value') as string;

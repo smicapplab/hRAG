@@ -7,7 +7,9 @@ import { getJwtSecret } from '$lib/server/security/vault';
 import { resolveEffectiveAccess } from '$lib/server/auth/roles';
 import crypto from 'node:crypto';
 
-export const actions = {
+import type { Actions } from './$types';
+
+export const actions: Actions = {
     login: async ({ request, cookies }) => {
         const data = await request.formData();
         const email = data.get('email') as string;

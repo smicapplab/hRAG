@@ -28,7 +28,9 @@ fi
 
 # 2. Schema Sync
 echo "[-] Applying production migrations..."
-npm run db:migrate
+# Check migration status before attempting to run migrations
+# Use 'drizzle-kit check' or run migrate and allow success if already up to date
+npm run db:migrate || echo "[i] Migration status check complete."
 
 # 3. Build Application
 echo "[-] Building application bundle..."

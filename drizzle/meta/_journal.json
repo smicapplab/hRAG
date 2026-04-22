@@ -29,6 +29,13 @@
       "when": 1776833954473,
       "tag": "0003_soft_blazing_skull",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1776840509292,
+      "tag": "0004_lazy_manta",
+      "breakpoints": true
     }
   ]
 }

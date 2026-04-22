@@ -202,10 +202,36 @@
 						</div>
 
 						<div class="space-y-4">
-							<form method="POST" action="?/updateSetting" use:enhance class="grid grid-cols-12 gap-4 items-end pb-4 border-b border-border/50">
+							<form method="POST" action="?/updateSetting" use:enhance class="grid grid-cols-12 gap-4 items-start pb-6 border-b border-border/50">
+								<div class="col-span-12 lg:col-span-4">
+									<label class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest block mb-2">Setting Key</label>
+									<div class="text-[11px] font-mono font-bold text-foreground">EMBEDDING_PROVIDER</div>
+									<p class="text-[9px] text-muted-foreground mt-2 leading-relaxed italic">Defines the mathematical engine for text-to-vector transformation. Local WASM is the most secure; Cloud offers highest accuracy.</p>
+									<input type="hidden" name="key" value="embeddings.provider" />
+								</div>
+								<div class="col-span-12 lg:col-span-6">
+									<label class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest block mb-2">Active Engine</label>
+									<select 
+										name="value" 
+										value={data.settings['embeddings.provider'] || 'local'}
+										class="w-full bg-neutral-950 border border-border rounded-sm p-3 text-[10px] font-mono outline-none focus:border-signal-blue"
+									>
+										<option value="local">LOCAL WASM (XENOVA/MINILM)</option>
+										<option value="ollama">OLLAMA (ON-PREMISE GPU)</option>
+										<option value="openai">OPENAI (THIRD-PARTY / EXTERNAL)</option>
+										<option value="google">GOOGLE GENAI (THIRD-PARTY / EXTERNAL)</option>
+									</select>
+								</div>
+								<div class="col-span-12 lg:col-span-2">
+									<button class="w-full py-3 bg-muted border border-border text-[9px] font-bold uppercase hover:bg-signal-blue hover:text-white transition-all">Update</button>
+								</div>
+							</form>
+
+							<form method="POST" action="?/updateSetting" use:enhance class="grid grid-cols-12 gap-4 items-start pb-6 border-b border-border/50">
 								<div class="col-span-12 lg:col-span-4">
 									<label class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest block mb-2">Setting Key</label>
 									<div class="text-[11px] font-mono font-bold text-foreground">INGEST_MAX_FILE_SIZE</div>
+									<p class="text-[9px] text-muted-foreground mt-2 leading-relaxed italic">Defines the hard-cap for document uploads. Large files increase extraction latency and memory pressure on stateless nodes.</p>
 									<input type="hidden" name="key" value="ingestion.max_file_size" />
 								</div>
 								<div class="col-span-12 lg:col-span-6">
@@ -214,58 +240,106 @@
 										type="number" 
 										name="value" 
 										value={data.settings['ingestion.max_file_size'] || 50}
-										class="w-full bg-neutral-950 border border-border rounded-sm p-2 text-xs font-mono outline-none focus:border-signal-blue"
+										class="w-full bg-neutral-950 border border-border rounded-sm p-3 text-xs font-mono outline-none focus:border-signal-blue transition-colors"
 									/>
 								</div>
 								<div class="col-span-12 lg:col-span-2">
-									<button class="w-full py-2 bg-muted border border-border text-[9px] font-bold uppercase hover:bg-signal-blue hover:text-white transition-all">Update</button>
+									<button class="w-full py-3 bg-muted border border-border text-[9px] font-bold uppercase hover:bg-signal-blue hover:text-white transition-all shadow-lg">Update</button>
 								</div>
 							</form>
 
-							<form method="POST" action="?/updateSetting" use:enhance class="grid grid-cols-12 gap-4 items-end pb-4 border-b border-border/50">
-								<div class="col-span-12 lg:col-span-4">
-									<label class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest block mb-2">Setting Key</label>
-									<div class="text-[11px] font-mono font-bold text-foreground">DEFAULT_VECTOR_PROVIDER</div>
-									<input type="hidden" name="key" value="vectors.provider" />
-								</div>
-								<div class="col-span-12 lg:col-span-6">
-									<label class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest block mb-2">Provider ID</label>
-									<select 
-										name="value" 
-										value={data.settings['vectors.provider'] || 'lancedb'}
-										class="w-full bg-neutral-950 border border-border rounded-sm p-2 text-[10px] font-mono outline-none focus:border-signal-blue"
-									>
-										<option value="lancedb">LANCEDB (Default)</option>
-										<option value="qdrant">QDRANT (Enterprise)</option>
-										<option value="pgvector">PGVECTOR (Legacy)</option>
-									</select>
-								</div>
-								<div class="col-span-12 lg:col-span-2">
-									<button class="w-full py-2 bg-muted border border-border text-[9px] font-bold uppercase hover:bg-signal-blue hover:text-white transition-all">Update</button>
-								</div>
-							</form>
+							<!-- Vector Provider Configuration -->
+							<div class="pb-6 border-b border-border/50 space-y-4">
+								<form method="POST" action="?/updateSetting" use:enhance class="grid grid-cols-12 gap-4 items-start">
+									<div class="col-span-12 lg:col-span-4">
+										<label class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest block mb-2">Setting Key</label>
+										<div class="text-[11px] font-mono font-bold text-foreground">VECTOR_STORAGE_ENGINE</div>
+										<p class="text-[9px] text-muted-foreground mt-2 leading-relaxed italic">Determines the primary storage for intelligence fragments. Note: Switching engines may require a full cluster re-index.</p>
+										<input type="hidden" name="key" value="vectors.provider" />
+									</div>
+									<div class="col-span-12 lg:col-span-6">
+										<label class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest block mb-2">Active Provider</label>
+										<select 
+											name="value" 
+											value={data.settings['vectors.provider'] || 'lancedb'}
+											class="w-full bg-neutral-950 border border-border rounded-sm p-3 text-[10px] font-mono outline-none focus:border-signal-blue"
+										>
+											<option value="lancedb">LANCEDB (S3-NATIVE / PORTABLE)</option>
+											<option value="qdrant">QDRANT (ENTERPRISE / CLUSTER)</option>
+											<option value="pgvector">PGVECTOR (RELATIONAL / LEGACY)</option>
+										</select>
+									</div>
+									<div class="col-span-12 lg:col-span-2">
+										<button class="w-full py-3 bg-muted border border-border text-[9px] font-bold uppercase hover:bg-signal-blue hover:text-white transition-all">Switch</button>
+									</div>
+								</form>
 
-							<form method="POST" action="?/updateSetting" use:enhance class="grid grid-cols-12 gap-4 items-end">
-								<div class="col-span-12 lg:col-span-4">
-									<label class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest block mb-2">Setting Key</label>
-									<div class="text-[11px] font-mono font-bold text-foreground">AUTO_CLASSIFICATION</div>
-									<input type="hidden" name="key" value="classification.auto_enabled" />
+								{#if data.settings['vectors.provider'] === 'qdrant'}
+									<div class="ml-4 p-4 border-l-2 border-signal-blue bg-signal-blue/5 space-y-4" transition:slide>
+										<h5 class="text-[9px] font-bold uppercase tracking-widest text-signal-blue">Qdrant Connection Protocol</h5>
+										<div class="grid grid-cols-2 gap-4">
+											<div class="space-y-1">
+												<label class="text-[8px] font-bold text-muted-foreground uppercase">Endpoint URL</label>
+												<input type="text" placeholder="http://qdrant:6333" class="w-full bg-neutral-950 border border-border p-2 text-[10px] font-mono outline-none" />
+											</div>
+											<div class="space-y-1">
+												<label class="text-[8px] font-bold text-muted-foreground uppercase">API Key (Optional)</label>
+												<input type="password" placeholder="••••••••" class="w-full bg-neutral-950 border border-border p-2 text-[10px] font-mono outline-none" />
+											</div>
+										</div>
+									</div>
+								{/if}
+							</div>
+
+							<!-- Intelligence Tiering (Classification) -->
+							<div class="pb-6 border-b border-border/50 space-y-4">
+								<form method="POST" action="?/updateSetting" use:enhance class="grid grid-cols-12 gap-4 items-start">
+									<div class="col-span-12 lg:col-span-4">
+										<label class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest block mb-2">Setting Key</label>
+										<div class="text-[11px] font-mono font-bold text-foreground">AUTO_CLASSIFICATION</div>
+										<p class="text-[9px] text-muted-foreground mt-2 leading-relaxed italic">Enables the 'High-Water Mark' safety net. AI will independently audit document sensitivity during ingestion.</p>
+										<input type="hidden" name="key" value="classification.auto_enabled" />
+									</div>
+									<div class="col-span-12 lg:col-span-6">
+										<label class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest block mb-2">Engine State</label>
+										<select 
+											name="value" 
+											value={data.settings['classification.auto_enabled'] || 'true'}
+											class="w-full bg-neutral-950 border border-border rounded-sm p-3 text-[10px] font-mono outline-none focus:border-signal-blue"
+										>
+											<option value="true">ENABLED (AI Sentry Active)</option>
+											<option value="false">DISABLED (Manual Triage Only)</option>
+										</select>
+									</div>
+									<div class="col-span-12 lg:col-span-2">
+										<button class="w-full py-3 bg-muted border border-border text-[9px] font-bold uppercase hover:bg-signal-blue hover:text-white transition-all">Update</button>
+									</div>
+								</form>
+
+								<div class="grid grid-cols-3 gap-4 ml-4">
+									<button class="p-3 border {data.settings['classification.tier'] === 'local' ? 'border-signal-green bg-signal-green/5' : 'border-border bg-muted/30'} rounded-sm text-left group">
+										<div class="flex items-center justify-between mb-2">
+											<span class="text-[10px] font-bold uppercase tracking-widest">Local WASM</span>
+											<div class="w-2 h-2 rounded-full bg-signal-green"></div>
+										</div>
+										<p class="text-[8px] text-muted-foreground uppercase leading-tight">Private-by-default. Zero data leaves the cluster.</p>
+									</button>
+									<button class="p-3 border {data.settings['classification.tier'] === 'ollama' ? 'border-signal-blue bg-signal-blue/5' : 'border-border bg-muted/30'} rounded-sm text-left group">
+										<div class="flex items-center justify-between mb-2">
+											<span class="text-[10px] font-bold uppercase tracking-widest">Ollama Sidecar</span>
+											<div class="w-2 h-2 rounded-full bg-signal-blue"></div>
+										</div>
+										<p class="text-[8px] text-muted-foreground uppercase leading-tight">On-premise GPU acceleration. High precision.</p>
+									</button>
+									<button class="p-3 border {data.settings['classification.tier'] === 'cloud' ? 'border-signal-red bg-signal-red/5' : 'border-border bg-muted/30'} rounded-sm text-left group">
+										<div class="flex items-center justify-between mb-2">
+											<span class="text-[10px] font-bold uppercase tracking-widest">Cloud AI</span>
+											<div class="w-2 h-2 rounded-full bg-signal-red"></div>
+										</div>
+										<p class="text-[8px] text-signal-red font-bold uppercase leading-tight">External Data Transfer. Maximum intelligence.</p>
+									</button>
 								</div>
-								<div class="col-span-12 lg:col-span-6">
-									<label class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest block mb-2">Engine State</label>
-									<select 
-										name="value" 
-										value={data.settings['classification.auto_enabled'] || 'true'}
-										class="w-full bg-neutral-950 border border-border rounded-sm p-2 text-[10px] font-mono outline-none focus:border-signal-blue"
-									>
-										<option value="true">ENABLED (AI Sentry Active)</option>
-										<option value="false">DISABLED (Manual Triage Only)</option>
-									</select>
-								</div>
-								<div class="col-span-12 lg:col-span-2">
-									<button class="w-full py-2 bg-muted border border-border text-[9px] font-bold uppercase hover:bg-signal-blue hover:text-white transition-all">Update</button>
-								</div>
-							</form>
+							</div>
 						</div>
 					</div>
 

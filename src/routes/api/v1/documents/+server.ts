@@ -2,9 +2,11 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db';
 import * as schema from '$lib/server/db/schema';
+import { eq } from 'drizzle-orm';
 import { s3, ensureBucket } from '$lib/server/security/s3';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { ingestionQueue } from '$lib/server/ingestion/queue';
+import { ROLE_WEIGHT, type Role } from '$lib/server/auth/roles';
 import crypto from 'node:crypto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -31,6 +33,31 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
         if (!file) {
             return json({ error: 'No file provided' }, { status: 400 });
+        }
+
+        // 1.5. Policy Enforcement (Classification Check)
+        const policy = await db.query.classificationPolicies.findFirst({
+            where: eq(schema.classificationPolicies.code, classification)
+        });
+
+        if (policy) {
+            const userRole = groupId ? (locals.user.groupRoles[groupId] || 'VIEWER') : 'MANAGER';
+            const effectiveRoleWeight = groupId ? ROLE_WEIGHT[userRole as Role] || 0 : 3; // Owner is MANAGER (3)
+            const requiredWeight = ROLE_WEIGHT[policy.minRoleRequired as Role] || 0;
+
+            if (effectiveRoleWeight < requiredWeight) {
+                return json({
+                    error: `Insufficient clearance for ${classification} classification. Required: ${policy.minRoleRequired}`
+                }, { status: 403 });
+            }
+
+            if (policy.requiresAudit) {
+                await db.insert(schema.auditLogs).values({
+                    userId: locals.user.id,
+                    event: 'CLASSIFIED_DOCUMENT_ACCESSED',
+                    metadata: JSON.stringify({ fileName: file.name, classification })
+                });
+            }
         }
 
         // 2. Stateless Storage: S3 Upload

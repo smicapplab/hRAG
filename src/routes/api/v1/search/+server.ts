@@ -103,10 +103,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         // 6. Audit Logging
         // Log the search action asynchronously
         const queryHash = crypto.createHash('sha256').update(query).digest('hex');
+        const resultsHash = crypto.createHash('sha256').update(JSON.stringify(secureResults.map(r => r.id))).digest('hex');
+        
         db.insert(schema.auditLogs).values({
             userId: userId,
             event: 'VECTOR_SEARCH_EXECUTED',
-            metadata: JSON.stringify({ queryHash, returnedHits: secureResults.length })
+            metadata: JSON.stringify({ queryHash, resultsHash, returnedHits: secureResults.length })
         }).catch(err => console.error("Failed to log search audit:", err));
 
         return json({ query, results: secureResults });

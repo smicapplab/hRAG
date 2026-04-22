@@ -152,15 +152,17 @@ The UI targets a dense, industrial aesthetic optimized for infrastructure monito
 ## 11. Development Milestones
 The following milestones are planned for implementation. Note that some tracks (Frontend vs Vector) can proceed in parallel once the SvelteKit project is initialized.
 
-- [ ] **SvelteKit Setup:** Initialize SvelteKit project with Tailwind and shadcn-svelte. (No dependencies)
+- [x] **SvelteKit Setup:** Initialize SvelteKit project with Tailwind and shadcn-svelte. (Completed)
 - [x] **Security & Compliance Guide:** Formalize "Iron-Clad" mandates and trade-offs. (Completed)
 - [ ] **Node Automation Scripts:** Implement `install.sh`, `run.sh`, `dev.sh`, and `reset-db.sh`. (No dependencies)
-- [ ] **Data Seeding:** Implement `db:seed:essential` (roles/super-user) and `db:seed:demo` (multi-tenant sample data). (Depends on: SvelteKit Setup)
+- [ ] **Data Seeding:** Implement `db:seed:essential` (roles/super-user/policies) and `db:seed:demo` (multi-tenant sample data). (Depends on: SvelteKit Setup)
 - [ ] **Frontend Foundation:** Implement "Control Room" design system components. (Depends on: SvelteKit Setup)
 - [x] **JWT Secret Management:** Implement AES-GCM encryption and S3 storage/recovery logic. (Completed)
+- [x] **Admin & Settings Control Plane (Phase 1):** Hierarchy Groups and Per-Group Roles. (Completed)
+- [ ] **Admin & Settings Control Plane (Phase 2):** Stateless Registry, Fleet Health (Heartbeats), and Audit Vault. (No dependencies)
 - [ ] **Vector Abstraction:** Define `VectorStore` interface and LanceDB/S3 provider. (No dependencies)
 - [ ] **SQLite/Litestream Integration:** Automate Litestream sidecar and restore logic. (Depends on: SvelteKit Setup)
-- [ ] **Ingestion Pipeline:** Pure Node extraction (WASM OCR), queue (Worker Threads vs BullMQ), and embedding (Local/Ollama/OpenAI/Gemini/Anthropic). (Depends on: Vector Abstraction, SvelteKit Setup)
+- [ ] **Ingestion Pipeline:** Pure Node extraction (WASM OCR), queue (Worker Threads vs BullMQ), and auto-classification (Local/Ollama/Cloud). (Depends on: Vector Abstraction, SvelteKit Setup)
 - [ ] **External Metadata Sync API:** REST endpoints for the "Power User Sidecar" to push externally processed document metadata. (Depends on: Ingestion Pipeline)
 - [ ] **Audit Log Ingestion API:** REST endpoints for external agents to report activities for centralized auditing. (Depends on: Health Endpoint)
 - [ ] **Health Endpoint:** Monitor Garage, LanceDB, and Litestream lag. (Depends on: SQLite Integration)

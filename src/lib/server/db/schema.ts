@@ -45,6 +45,20 @@ export const classificationPolicies = sqliteTable('classification_policies', {
 	description: text('description')
 });
 
+export const tags = sqliteTable('tags', {
+	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+	name: text('name').notNull().unique(),
+	color: text('color').notNull().default('text-signal-blue'),
+	isAiGenerated: integer('is_ai_generated', { mode: 'boolean' }).notNull().default(false)
+});
+
+export const documentsToTags = sqliteTable('documents_to_tags', {
+	documentId: text('document_id').notNull().references(() => documents.id, { onDelete: 'cascade' }),
+	tagId: text('tag_id').notNull().references(() => tags.id, { onDelete: 'cascade' })
+}, (t) => ({
+	pk: primaryKey({ columns: [t.documentId, t.tagId] })
+}));
+
 export const documents = sqliteTable('documents', {
 	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 	name: text('name').notNull(),
@@ -131,7 +145,23 @@ export const usersToGroupsRelations = relations(usersToGroups, ({ one }) => ({
 }));
 
 export const documentsRelations = relations(documents, ({ many }) => ({
-	permissions: many(documentPermissions)
+	permissions: many(documentPermissions),
+	tags: many(documentsToTags)
+}));
+
+export const tagsRelations = relations(tags, ({ many }) => ({
+	documents: many(documentsToTags)
+}));
+
+export const documentsToTagsRelations = relations(documentsToTags, ({ one }) => ({
+	document: one(documents, {
+		fields: [documentsToTags.documentId],
+		references: [documents.id]
+	}),
+	tag: one(tags, {
+		fields: [documentsToTags.tagId],
+		references: [tags.id]
+	})
 }));
 
 export const documentPermissionsRelations = relations(documentPermissions, ({ one }) => ({

@@ -22,6 +22,13 @@
       "when": 1776831348240,
       "tag": "0002_awesome_roulette",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1776833954473,
+      "tag": "0003_soft_blazing_skull",
+      "breakpoints": true
     }
   ]
 }

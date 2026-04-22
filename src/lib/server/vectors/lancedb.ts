@@ -141,6 +141,13 @@ export class LanceDBStore implements VectorStore {
             filterStr = `(${filterStr}) OR docId IN (${idList})`;
         }
 
+        if (securityFilter.mandatoryDocIds && securityFilter.mandatoryDocIds.length > 0) {
+            // Cap at 5,000 to prevent engine overload
+            const cappedIds = securityFilter.mandatoryDocIds.slice(0, 5000);
+            const idList = cappedIds.map(id => `'${id.replace(/'/g, "''")}'`).join(', ');
+            filterStr = `(${filterStr}) AND docId IN (${idList})`;
+        }
+
         const results = await table.search(queryVector)
             .limit(limit)
             .where(filterStr)

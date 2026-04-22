@@ -46,6 +46,11 @@ export const load: PageServerLoad = async ({ locals, url }) => {
             with: {
                 permissions: {
                     where: eq(schema.documentPermissions.userId, userId)
+                },
+                tags: {
+                    with: {
+                        tag: true
+                    }
                 }
             },
             orderBy: (docs, { desc }) => [desc(docs.createdAt)]
@@ -55,7 +60,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
             documents: userDocs.map(doc => ({
                 ...doc,
                 isOwner: doc.ownerId === userId,
-                userPermission: doc.permissions?.[0]?.permission || (doc.ownerId === userId ? 'OWNER' : 'VIEW')
+                userPermission: doc.permissions?.[0]?.permission || (doc.ownerId === userId ? 'OWNER' : 'VIEW'),
+                tags: doc.tags.map(t => t.tag.name)
             })),
             pagination: {
                 total: totalDocs,

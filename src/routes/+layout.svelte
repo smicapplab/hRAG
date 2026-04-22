@@ -3,7 +3,7 @@
   import Sidebar from '$lib/components/layout/Sidebar.svelte';
   import favicon from '$lib/assets/favicon.svg';
   import { page } from '$app/state';
-  import { Menu } from 'lucide-svelte';
+  import { Menu, AlertTriangle } from 'lucide-svelte';
 
   let { data, children } = $props();
 
@@ -23,15 +23,24 @@
   <title>hRAG | Hybrid RAG Control Room</title>
 </svelte:head>
 
-<div class="flex h-screen w-full bg-background overflow-hidden selection:bg-signal-blue/30 selection:text-signal-blue">
-  <!-- Scanline industrial overlay -->
-  <div class="fixed inset-0 pointer-events-none scanline opacity-20 z-50"></div>
-  
-  {#if !isLoginPage}
-    <Sidebar user={data.user} isOpen={isMobileSidebarOpen} onClose={() => isMobileSidebarOpen = false} />
+<div class="flex flex-col h-screen w-full bg-background overflow-hidden selection:bg-signal-blue/30 selection:text-signal-blue">
+  {#if data.isSingleNode}
+    <div class="bg-signal-orange text-white text-[10px] font-bold tracking-[0.2em] py-1 px-4 text-center uppercase flex items-center justify-center gap-2 z-[60] shrink-0">
+      <AlertTriangle size={12} />
+      Non-Replicated Node: Intelligence metadata is stored on a single physical disk. Redundancy disabled.
+      <AlertTriangle size={12} />
+    </div>
   {/if}
 
-  <main class="flex-1 flex flex-col min-w-0 relative overflow-hidden control-room-grid">
+  <div class="flex flex-1 overflow-hidden">
+    <!-- Scanline industrial overlay -->
+    <div class="fixed inset-0 pointer-events-none scanline opacity-20 z-50"></div>
+    
+    {#if !isLoginPage}
+      <Sidebar user={data.user} isOpen={isMobileSidebarOpen} onClose={() => isMobileSidebarOpen = false} />
+    {/if}
+
+    <main class="flex-1 flex flex-col min-w-0 relative overflow-hidden control-room-grid">
     {#if !isLoginPage}
       <!-- Mobile Header -->
       <header class="lg:hidden p-4 border-b border-border bg-background/80 backdrop-blur-md flex items-center justify-between z-30">
@@ -54,4 +63,5 @@
       {@render children()}
     </div>
   </main>
+  </div>
 </div>

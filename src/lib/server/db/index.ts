@@ -1,5 +1,4 @@
 import { drizzle } from 'drizzle-orm/libsql';
-import { createClient } from '@libsql/client';
 import * as schema from './schema';
 import * as dotenv from 'dotenv';
 
@@ -7,6 +6,9 @@ import * as dotenv from 'dotenv';
 if (typeof process !== 'undefined') {
     dotenv.config();
 }
+
+// Opaque dynamic import to bypass Vite's static analysis
+const { createClient } = await import(/* @vite-ignore */ '@libsql/client');
 
 // In SvelteKit, DATABASE_URL will be in process.env if using adapter-node or during dev.
 // For other environments, we ensure it's loaded from .env.

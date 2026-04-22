@@ -4,7 +4,9 @@ import { decrypt, deriveKey } from '$lib/server/security/crypto';
 import { fetchSecretBlob } from '$lib/server/security/s3';
 import { setJwtSecret, getJwtSecret } from '$lib/server/security/vault';
 import { db } from '$lib/server/db';
-import { nodeHeartbeats } from '$lib/server/db/schema';
+import { nodeHeartbeats, apiKeys } from '$lib/server/db/schema';
+import { resolveEffectiveAccess } from '$lib/server/auth/roles';
+import { eq } from 'drizzle-orm';
 import * as dotenv from 'dotenv';
 import os from 'os';
 
@@ -109,6 +111,7 @@ if (process.env.NODE_ENV !== 'test') {
  */
 export const handle: Handle = async ({ event, resolve }) => {
     const token = event.cookies.get('jwt');
+    const apiKey = event.request.headers.get('x-api-key');
 
     // Layer 1: Identity Extraction
     if (token) {
@@ -132,6 +135,35 @@ export const handle: Handle = async ({ event, resolve }) => {
             // Invalid or expired token
             event.cookies.delete('jwt', { path: '/' });
         }
+    } else if (apiKey) {
+        try {
+            const keyRecord = await db.query.apiKeys.findFirst({
+                where: eq(apiKeys.key, apiKey),
+                with: { owner: true }
+            });
+
+            if (keyRecord && keyRecord.owner) {
+                const groupRoles = await resolveEffectiveAccess(keyRecord.ownerId);
+                event.locals.user = {
+                    id: keyRecord.ownerId,
+                    email: keyRecord.owner.email,
+                    name: keyRecord.owner.name,
+                    isAdmin: keyRecord.owner.isAdmin,
+                    isCompliance: keyRecord.owner.isCompliance,
+                    groupIds: Object.keys(groupRoles),
+                    groupRoles,
+                    tokenVersion: keyRecord.owner.tokenVersion
+                };
+
+                // Update last used timestamp (async)
+                db.update(apiKeys)
+                    .set({ lastUsedAt: new Date() })
+                    .where(eq(apiKeys.id, keyRecord.id))
+                    .catch(console.error);
+            }
+        } catch (err) {
+            console.error('[Hooks] API Key validation error:', err);
+        }
     }
 
     // Protection: Redirect unauthenticated users
@@ -141,6 +173,13 @@ export const handle: Handle = async ({ event, resolve }) => {
         event.url.pathname.startsWith('/api/ready');
 
     if (!event.locals.user && !isPublic) {
+        // For API calls, return 401 instead of redirect
+        if (event.url.pathname.startsWith('/api/')) {
+            return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+                status: 401,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
         return Response.redirect(`${event.url.origin}/login`, 302);
     }
 

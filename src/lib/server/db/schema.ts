@@ -99,6 +99,16 @@ export const nodeHeartbeats = sqliteTable('node_heartbeats', {
 	lastSeen: integer('last_seen', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date())
 });
 
+export const apiKeys = sqliteTable('api_keys', {
+	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+	key: text('key').notNull().unique(), // Hashed or secure random
+	name: text('name').notNull(), // e.g., 'OCR-Worker-01'
+	ownerId: text('owner_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	role: text('role', { enum: ['AGENT', 'ADMIN'] }).notNull().default('AGENT'),
+	lastUsedAt: integer('last_used_at', { mode: 'timestamp' }),
+	createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date())
+});
+
 export const auditLogs = sqliteTable('audit_logs', {
 	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
 	userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
@@ -124,7 +134,15 @@ export const groupsRelations = relations(groups, ({ one, many }) => ({
 export const usersRelations = relations(users, ({ many }) => ({
 	groups: many(usersToGroups, { relationName: 'user_groups' }),
 	grantedGroups: many(usersToGroups, { relationName: 'granted_groups' }),
-	documents: many(documents)
+	documents: many(documents),
+	apiKeys: many(apiKeys)
+}));
+
+export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
+	owner: one(users, {
+		fields: [apiKeys.ownerId],
+		references: [users.id]
+	})
 }));
 
 export const usersToGroupsRelations = relations(usersToGroups, ({ one }) => ({

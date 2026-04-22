@@ -11,7 +11,7 @@ export const load: PageServerLoad = async () => {
     
     return {
         policies,
-        settings: settings.reduce((acc, s) => ({ ...acc, [s.key]: JSON.parse(s.value) }), {}),
+        settings: settings.reduce((acc, s) => ({ ...acc, [s.key]: JSON.parse(s.value) }), {} as Record<string, any>),
         quarantine
     };
 };

@@ -50,15 +50,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         // VectorStore enforces Engine-Level unified ACL scoping
         const vectorStore = await getVectorStore();
         
-        // Final pre-filter doc IDs: Intersection of authorized and tag-filtered
-        const combinedDocIds = tagFilteredDocIds 
-            ? authorizedDocIds.filter(id => tagFilteredDocIds?.includes(id))
-            : authorizedDocIds;
-
         const vectorResults = await vectorStore.similaritySearch(queryVector, limit, {
             userId,
             groupIds: groupIds || [],
-            authorizedDocIds: tagFilteredDocIds ? tagFilteredDocIds : authorizedDocIds
+            authorizedDocIds: authorizedDocIds,
+            mandatoryDocIds: tagFilteredDocIds || undefined
         });
 
         if (vectorResults.length === 0) {

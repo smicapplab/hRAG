@@ -183,11 +183,12 @@
 						<FileText size={16} class="shrink-0 text-signal-blue" />
 						<div class="min-w-0 flex-1">
 							<div class="flex items-center gap-2">
-								<p
-									class="cursor-pointer truncate font-mono text-sm tracking-tight text-foreground transition-colors group-hover:text-signal-blue"
+								<a
+									href="/documents/{doc.id}"
+									class="truncate font-mono text-sm tracking-tight text-foreground transition-colors hover:text-signal-blue"
 								>
 									{doc.name}
-								</p>
+								</a>
 								{#if !doc.isOwner}
 									<span
 										class="rounded-full border border-signal-blue/20 bg-signal-blue/10 px-1.5 py-0.5 text-[8px] font-bold tracking-widest text-signal-blue uppercase"
@@ -195,9 +196,19 @@
 									>
 								{/if}
 							</div>
-							<p class="mt-1 text-[9px] text-muted-foreground uppercase sm:hidden">
-								{new Date(doc.createdAt).toISOString()}
-							</p>
+							<div class="mt-1 flex flex-wrap gap-1">
+								{#if doc.tags && doc.tags.length > 0}
+									{#each doc.tags.slice(0, 3) as tag}
+										<span class="px-1 py-0.5 rounded-sm bg-muted text-[8px] text-muted-foreground border border-border uppercase">{tag}</span>
+									{/each}
+									{#if doc.tags.length > 3}
+										<span class="text-[8px] text-muted-foreground uppercase">+{doc.tags.length - 3}</span>
+									{/if}
+								{/if}
+								<p class="text-[9px] text-muted-foreground uppercase sm:hidden ml-auto">
+									{new Date(doc.createdAt).toISOString()}
+								</p>
+							</div>
 						</div>
 					</div>
 

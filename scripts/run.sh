@@ -11,9 +11,17 @@ echo "------------------------------------------------"
 
 # 1. State Recovery
 if command -v litestream >/dev/null 2>&1; then
-  echo "[-] Initializing Litestream Restore..."
-  # litestream restore -if-db-not-exists -if-replica-exists local.db
-  echo "[+] Metadata state recovered from S3."
+  echo "[-] Verifying Metadata Replication Bucket..."
+  # Ensure the bucket exists before we try to restore/replicate
+  npm run s3:ensure hrag-metadata || true
+
+  if [ ! -f "local.db" ]; then
+    echo "[-] local.db not found. Attempting Litestream Restore..."
+    litestream restore -if-replica-exists local.db
+    echo "[+] Metadata state recovered from S3."
+  else
+    echo "[i] local.db exists. Skipping restore."
+  fi
 else
   echo "[!] Litestream not found. Proceeding with local state only."
 fi
@@ -32,9 +40,8 @@ echo "[+] Launching Intelligence Node..."
 if command -v litestream >/dev/null 2>&1; then
   # Wrap the node process in litestream replicate
   echo "[-] Starting Node with real-time S3 replication..."
-  # litestream replicate -exec "node build/index.js"
-  npm run preview
+  litestream replicate -exec "node build/index.js"
 else
   echo "[!] WARNING: Starting without S3 replication (Litestream missing)."
-  npm run preview
+  node build/index.js
 fi

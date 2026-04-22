@@ -174,7 +174,7 @@
 		background: var(--color-border);
 		border-radius: 2px;
 	}
-	.animate-spin-slow {
+	:global(.animate-spin-slow) {
 		animation: spin 3s linear infinite;
 	}
 	@keyframes spin {

@@ -13,6 +13,7 @@ export interface SecurityFilter {
     userId: string;
     groupIds: string[];
     authorizedDocIds?: string[];
+    mandatoryDocIds?: string[]; // Documents MUST be in this list (intersection with ACL)
 }
 
 export interface VectorStore {

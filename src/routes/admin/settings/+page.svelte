@@ -12,6 +12,7 @@
 		ChevronRight
 	} from 'lucide-svelte';
 	import { enhance } from '$app/forms';
+	import { slide } from 'svelte/transition';
 
 	let { data }: { data: PageData } = $props();
 
@@ -124,10 +125,12 @@
 							<div class="grid grid-cols-2 gap-4">
 								<div class="space-y-1">
 									<label
+										for="role-{policy.id}"
 										class="text-[9px] font-bold tracking-widest text-muted-foreground uppercase"
 										>Min Role Required</label
 									>
 									<select
+										id="role-{policy.id}"
 										name="minRoleRequired"
 										value={policy.minRoleRequired}
 										class="w-full rounded-sm border border-border bg-neutral-950 p-2 font-mono text-[10px] outline-none focus:border-signal-blue"
@@ -139,6 +142,7 @@
 								</div>
 								<div class="space-y-1">
 									<label
+										for="audit-{policy.id}"
 										class="text-[9px] font-bold tracking-widest text-muted-foreground uppercase"
 										>Audit Requirement</label
 									>
@@ -146,6 +150,7 @@
 										class="flex h-9 items-center gap-2 rounded-sm border border-border bg-neutral-950/50 px-2"
 									>
 										<input
+											id="audit-{policy.id}"
 											type="checkbox"
 											checked={policy.requiresAudit}
 											class="accent-signal-blue"
@@ -158,10 +163,13 @@
 							</div>
 
 							<div class="space-y-1">
-								<label class="text-[9px] font-bold tracking-widest text-muted-foreground uppercase"
+								<label
+									for="desc-{policy.id}"
+									class="text-[9px] font-bold tracking-widest text-muted-foreground uppercase"
 									>Policy Description</label
 								>
 								<textarea
+									id="desc-{policy.id}"
 									name="description"
 									value={policy.description}
 									rows="2"
@@ -300,9 +308,9 @@
 								class="grid grid-cols-12 items-start gap-4 border-b border-border/50 pb-6"
 							>
 								<div class="col-span-12 lg:col-span-4">
-									<label
+									<span
 										class="mb-2 block text-[9px] font-bold tracking-widest text-muted-foreground uppercase"
-										>Setting Key</label
+										>Setting Key</span
 									>
 									<div class="font-mono text-[11px] font-bold text-foreground">
 										EMBEDDING_PROVIDER
@@ -315,10 +323,12 @@
 								</div>
 								<div class="col-span-12 lg:col-span-6">
 									<label
+										for="setting-embeddings-provider"
 										class="mb-2 block text-[9px] font-bold tracking-widest text-muted-foreground uppercase"
 										>Active Engine</label
 									>
 									<select
+										id="setting-embeddings-provider"
 										name="value"
 										value={data.settings['embeddings.provider'] || 'local'}
 										class="w-full rounded-sm border border-border bg-neutral-950 p-3 font-mono text-[10px] outline-none focus:border-signal-blue"
@@ -344,9 +354,9 @@
 								class="grid grid-cols-12 items-start gap-4 border-b border-border/50 pb-6"
 							>
 								<div class="col-span-12 lg:col-span-4">
-									<label
+									<span
 										class="mb-2 block text-[9px] font-bold tracking-widest text-muted-foreground uppercase"
-										>Setting Key</label
+										>Setting Key</span
 									>
 									<div class="font-mono text-[11px] font-bold text-foreground">
 										INGEST_MAX_FILE_SIZE
@@ -359,10 +369,12 @@
 								</div>
 								<div class="col-span-12 lg:col-span-6">
 									<label
+										for="setting-ingestion-max-file-size"
 										class="mb-2 block text-[9px] font-bold tracking-widest text-muted-foreground uppercase"
 										>Value (MB)</label
 									>
 									<input
+										id="setting-ingestion-max-file-size"
 										type="number"
 										name="value"
 										value={data.settings['ingestion.max_file_size'] || 50}
@@ -386,9 +398,9 @@
 									class="grid grid-cols-12 items-start gap-4"
 								>
 									<div class="col-span-12 lg:col-span-4">
-										<label
+										<span
 											class="mb-2 block text-[9px] font-bold tracking-widest text-muted-foreground uppercase"
-											>Setting Key</label
+											>Setting Key</span
 										>
 										<div class="font-mono text-[11px] font-bold text-foreground">
 											VECTOR_STORAGE_ENGINE
@@ -401,10 +413,12 @@
 									</div>
 									<div class="col-span-12 lg:col-span-6">
 										<label
+											for="setting-vectors-provider"
 											class="mb-2 block text-[9px] font-bold tracking-widest text-muted-foreground uppercase"
 											>Active Provider</label
 										>
 										<select
+											id="setting-vectors-provider"
 											name="value"
 											value={data.settings['vectors.provider'] || 'lancedb'}
 											class="w-full rounded-sm border border-border bg-neutral-950 p-3 font-mono text-[10px] outline-none focus:border-signal-blue"
@@ -432,20 +446,26 @@
 										</h5>
 										<div class="grid grid-cols-2 gap-4">
 											<div class="space-y-1">
-												<label class="text-[8px] font-bold text-muted-foreground uppercase"
+												<label 
+													for="qdrant-url"
+													class="text-[8px] font-bold text-muted-foreground uppercase"
 													>Endpoint URL</label
 												>
 												<input
+													id="qdrant-url"
 													type="text"
 													placeholder="http://qdrant:6333"
 													class="w-full border border-border bg-neutral-950 p-2 font-mono text-[10px] outline-none"
 												/>
 											</div>
 											<div class="space-y-1">
-												<label class="text-[8px] font-bold text-muted-foreground uppercase"
+												<label 
+													for="qdrant-key"
+													class="text-[8px] font-bold text-muted-foreground uppercase"
 													>API Key (Optional)</label
 												>
 												<input
+													id="qdrant-key"
 													type="password"
 													placeholder="••••••••"
 													class="w-full border border-border bg-neutral-950 p-2 font-mono text-[10px] outline-none"
@@ -465,9 +485,9 @@
 									class="grid grid-cols-12 items-start gap-4"
 								>
 									<div class="col-span-12 lg:col-span-4">
-										<label
+										<span
 											class="mb-2 block text-[9px] font-bold tracking-widest text-muted-foreground uppercase"
-											>Setting Key</label
+											>Setting Key</span
 										>
 										<div class="font-mono text-[11px] font-bold text-foreground">
 											AUTO_CLASSIFICATION
@@ -480,10 +500,12 @@
 									</div>
 									<div class="col-span-12 lg:col-span-6">
 										<label
+											for="setting-classification-auto-enabled"
 											class="mb-2 block text-[9px] font-bold tracking-widest text-muted-foreground uppercase"
 											>Engine State</label
 										>
 										<select
+											id="setting-classification-auto-enabled"
 											name="value"
 											value={data.settings['classification.auto_enabled'] || 'true'}
 											class="w-full rounded-sm border border-border bg-neutral-950 p-3 font-mono text-[10px] outline-none focus:border-signal-blue"
@@ -501,48 +523,80 @@
 								</form>
 
 								<div class="ml-4 grid grid-cols-3 gap-4">
-									<button
-										class="border p-3 {data.settings['classification.tier'] === 'local'
-											? 'border-signal-green bg-signal-green/5'
-											: 'border-border bg-muted/30'} group rounded-sm text-left"
-									>
-										<div class="mb-2 flex items-center justify-between">
-											<span class="text-[10px] font-bold tracking-widest uppercase">Local WASM</span
-											>
-											<div class="h-2 w-2 rounded-full bg-signal-green"></div>
-										</div>
-										<p class="text-[8px] leading-tight text-muted-foreground uppercase">
-											Private-by-default. Zero data leaves the cluster.
-										</p>
-									</button>
-									<button
-										class="border p-3 {data.settings['classification.tier'] === 'ollama'
-											? 'border-signal-blue bg-signal-blue/5'
-											: 'border-border bg-muted/30'} group rounded-sm text-left"
-									>
-										<div class="mb-2 flex items-center justify-between">
-											<span class="text-[10px] font-bold tracking-widest uppercase"
-												>Ollama Sidecar</span
-											>
-											<div class="h-2 w-2 rounded-full bg-signal-blue"></div>
-										</div>
-										<p class="text-[8px] leading-tight text-muted-foreground uppercase">
-											On-premise GPU acceleration. High precision.
-										</p>
-									</button>
-									<button
-										class="border p-3 {data.settings['classification.tier'] === 'cloud'
-											? 'border-signal-red bg-signal-red/5'
-											: 'border-border bg-muted/30'} group rounded-sm text-left"
-									>
-										<div class="mb-2 flex items-center justify-between">
-											<span class="text-[10px] font-bold tracking-widest uppercase">Cloud AI</span>
-											<div class="h-2 w-2 rounded-full bg-signal-red"></div>
-										</div>
-										<p class="text-[8px] leading-tight font-bold text-signal-red uppercase">
-											External Data Transfer. Maximum intelligence.
-										</p>
-									</button>
+									<form method="POST" action="?/updateSetting" use:enhance>
+										<input type="hidden" name="key" value="classification.tier" />
+										<input type="hidden" name="value" value="local" />
+										<button
+											class="w-full h-full border p-3 {data.settings['classification.tier'] === 'local'
+												? 'border-signal-green bg-signal-green/5'
+												: 'border-border bg-muted/30'} group rounded-sm text-left transition-colors hover:border-signal-green/50"
+										>
+											<div class="mb-2 flex items-center justify-between">
+												<span class="text-[10px] font-bold tracking-widest uppercase">Local WASM</span
+												>
+												{#if data.settings['classification.tier'] === 'local'}
+													<div class="relative h-2 w-2 rounded-full bg-signal-green">
+														<div class="absolute inset-0 animate-ping rounded-full bg-signal-green opacity-50"></div>
+													</div>
+												{:else}
+													<div class="h-2 w-2 rounded-full border border-muted-foreground opacity-50"></div>
+												{/if}
+											</div>
+											<p class="text-[8px] leading-tight text-muted-foreground uppercase">
+												Private-by-default. Zero data leaves the cluster.
+											</p>
+										</button>
+									</form>
+
+									<form method="POST" action="?/updateSetting" use:enhance>
+										<input type="hidden" name="key" value="classification.tier" />
+										<input type="hidden" name="value" value="ollama" />
+										<button
+											class="w-full h-full border p-3 {data.settings['classification.tier'] === 'ollama'
+												? 'border-signal-blue bg-signal-blue/5'
+												: 'border-border bg-muted/30'} group rounded-sm text-left transition-colors hover:border-signal-blue/50"
+										>
+											<div class="mb-2 flex items-center justify-between">
+												<span class="text-[10px] font-bold tracking-widest uppercase"
+													>Ollama Sidecar</span
+												>
+												{#if data.settings['classification.tier'] === 'ollama'}
+													<div class="relative h-2 w-2 rounded-full bg-signal-blue">
+														<div class="absolute inset-0 animate-ping rounded-full bg-signal-blue opacity-50"></div>
+													</div>
+												{:else}
+													<div class="h-2 w-2 rounded-full border border-muted-foreground opacity-50"></div>
+												{/if}
+											</div>
+											<p class="text-[8px] leading-tight text-muted-foreground uppercase">
+												On-premise GPU acceleration. High precision.
+											</p>
+										</button>
+									</form>
+
+									<form method="POST" action="?/updateSetting" use:enhance>
+										<input type="hidden" name="key" value="classification.tier" />
+										<input type="hidden" name="value" value="cloud" />
+										<button
+											class="w-full h-full border p-3 {data.settings['classification.tier'] === 'cloud'
+												? 'border-signal-red bg-signal-red/5'
+												: 'border-border bg-muted/30'} group rounded-sm text-left transition-colors hover:border-signal-red/50"
+										>
+											<div class="mb-2 flex items-center justify-between">
+												<span class="text-[10px] font-bold tracking-widest uppercase">Cloud AI</span>
+												{#if data.settings['classification.tier'] === 'cloud'}
+													<div class="relative h-2 w-2 rounded-full bg-signal-red">
+														<div class="absolute inset-0 animate-ping rounded-full bg-signal-red opacity-50"></div>
+													</div>
+												{:else}
+													<div class="h-2 w-2 rounded-full border border-muted-foreground opacity-50"></div>
+												{/if}
+											</div>
+											<p class="text-[8px] leading-tight font-bold text-signal-red uppercase">
+												External Data Transfer. Maximum intelligence.
+											</p>
+										</button>
+									</form>
 								</div>
 							</div>
 						</div>

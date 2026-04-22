@@ -3,11 +3,16 @@ import { jwtVerify } from 'jose';
 import { decrypt, deriveKey } from '$lib/server/security/crypto';
 import { fetchSecretBlob } from '$lib/server/security/s3';
 import { setJwtSecret, getJwtSecret } from '$lib/server/security/vault';
+import { db } from '$lib/server/db';
+import { nodeHeartbeats } from '$lib/server/db/schema';
 import * as dotenv from 'dotenv';
+import os from 'os';
 
 if (typeof process !== 'undefined') {
     dotenv.config();
 }
+
+const nodeId = `${os.hostname()}-${crypto.randomUUID().slice(0, 8)}`;
 
 /**
  * hRAG Boot Loader
@@ -16,6 +21,7 @@ if (typeof process !== 'undefined') {
 async function bootstrap() {
     console.log('------------------------------------------------');
     console.log('hRAG CONTROL ROOM: SECURITY BOOTSTRAP');
+    console.log('Node ID:', nodeId);
     console.log('------------------------------------------------');
 
     const passphrase = process.env.HRAG_MASTER_PASSPHRASE;
@@ -39,11 +45,56 @@ async function bootstrap() {
         
         setJwtSecret(secret);
         console.log('[+] Security chain established. Node is operational.');
+
+        // Start Node Heartbeat Loop
+        startHeartbeatLoop();
+        console.log('[+] Heartbeat monitoring active (60s interval).');
         console.log('------------------------------------------------');
     } catch (err: any) {
         console.error('[!] FATAL: Security bootstrap failed:', err.message);
         process.exit(1);
     }
+}
+
+/**
+ * Reports node health and identity to the shared registry.
+ */
+async function startHeartbeatLoop() {
+    const isPrimary = process.env.HRAG_PRIMARY === 'true';
+    
+    const sendHeartbeat = async () => {
+        try {
+            const metrics = {
+                cpu: os.loadavg()[0],
+                memory: 1 - (os.freemem() / os.totalmem()),
+                uptime: os.uptime()
+            };
+
+            await db.insert(nodeHeartbeats)
+                .values({
+                    nodeId,
+                    hostname: os.hostname(),
+                    isPrimary,
+                    metrics: JSON.stringify(metrics),
+                    lastSeen: new Date()
+                })
+                .onConflictDoUpdate({
+                    target: nodeHeartbeats.nodeId,
+                    set: {
+                        metrics: JSON.stringify(metrics),
+                        lastSeen: new Date()
+                    }
+                });
+        } catch (err) {
+            console.error('[!] Heartbeat failure:', err);
+        }
+    };
+
+    // Initial heartbeat
+    await sendHeartbeat();
+    
+    // 60-second loop
+    setInterval(sendHeartbeat, 60 * 1000);
 }
 
 // Execute bootstrap on server start (module level execution in hooks.server.ts)

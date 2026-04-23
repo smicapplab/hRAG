@@ -70,8 +70,10 @@ export async function getVectorStore(): Promise<VectorStore> {
     if (initializationPromise) return initializationPromise;
 
     initializationPromise = (async () => {
+        const { getSetting } = await import('../admin/registry');
         const { env } = await import('$env/dynamic/private');
-        const provider = (env.VECTOR_STORE_TYPE || 'lancedb').toLowerCase();
+        
+        const provider = (await getSetting('vectors.engine', env.VECTOR_STORE_TYPE || 'lancedb')).toLowerCase();
 
         let instance: VectorStore;
         if (provider === 'lancedb') {
@@ -80,6 +82,9 @@ export async function getVectorStore(): Promise<VectorStore> {
         } else if (provider === 'pgvector') {
             const { PgVectorStore } = await import('./pgvector');
             instance = new PgVectorStore();
+        } else if (provider === 'qdrant') {
+            // Placeholder for Qdrant support
+            throw new Error(`Qdrant provider is selected but not yet implemented. Please contribute or switch back to LanceDB/PgVector.`);
         } else {
             throw new Error(`Unknown provider: ${provider}`);
         }

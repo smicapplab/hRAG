@@ -18,6 +18,10 @@ export function setJwtSecret(secret: string) {
  */
 export function getJwtSecret(): string {
     if (!jwtSecret) {
+        if (process.env.NODE_ENV !== 'production') {
+            console.warn('[!] WARNING: JWT Secret not initialized. Using insecure development fallback.');
+            return process.env.JWT_SECRET || 'dev-secret-only-not-for-production';
+        }
         throw new Error('JWT Secret not initialized in memory. Security bootstrap required.');
     }
     return jwtSecret;

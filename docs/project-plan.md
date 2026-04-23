@@ -170,5 +170,5 @@ The following milestones are planned for implementation. Note that some tracks (
 - [x] **Audit Log Ingestion API:** REST endpoints for external agents to report activities. (Completed)
 - [x] **SQLite/Litestream Integration:** Automate Litestream sidecar and restore logic with `litestream.yml`. (Completed)
 - [x] **Single-Node Warning:** Add a UI banner/alert for non-replicated storage (Single-node Garage). (Completed)
-- [ ] **Nginx Config Templating:** Automate SSL and upstream blocks for multi-node clusters.
-- [ ] **Upgrade Strategy:** Implement `hrag update` with Drizzle migrations and binary swaps.
+- [x] **Nginx Config Templating:** Automate SSL and upstream blocks for multi-node clusters.
+- [x] **Upgrade Strategy:** Implement `hrag update` with Drizzle migrations and binary swaps.

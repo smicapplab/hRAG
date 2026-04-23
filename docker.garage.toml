@@ -1,9 +1,0 @@
-metadata_dir = "/meta"
-data_dir = "/data"
-db_engine = "sqlite"
-replication_factor = 1
-rpc_bind_addr = "0.0.0.0:3901"
-rpc_secret = "5e6c61be086c119bdf744aaa75a3894e9bb0dc34e35012f8e5a8fd50f2465114"
-[s3_api]
-api_bind_addr = "0.0.0.0:3900"
-s3_region = "us-east-1"

@@ -39,7 +39,12 @@ async function bootstrap() {
         if (!blob) {
             console.error('[!] FATAL: JWT secret blob not found in S3 (hrag-system/secrets/jwt.enc).');
             console.error('[i] Run installation or setup script to initialize secrets.');
-            process.exit(1);
+            if (process.env.NODE_ENV === 'production') {
+                process.exit(1);
+            } else {
+                console.warn('[!] Continuing in degraded mode (Development only).');
+                return;
+            }
         }
 
         console.log('[-] Decrypting JWT secret material...');
@@ -54,7 +59,11 @@ async function bootstrap() {
         console.log('------------------------------------------------');
     } catch (err: any) {
         console.error('[!] FATAL: Security bootstrap failed:', err.message);
-        process.exit(1);
+        if (process.env.NODE_ENV === 'production') {
+            process.exit(1);
+        } else {
+            console.warn('[!] Continuing in degraded mode (Development only).');
+        }
     }
 }
 
@@ -181,8 +190,8 @@ export const handle: Handle = async ({ event, resolve }) => {
     // Protection: Redirect unauthenticated users
     const isPublic = 
         event.url.pathname === '/login' || 
-        event.url.pathname.startsWith('/api/health') ||
-        event.url.pathname.startsWith('/api/ready');
+        event.url.pathname.startsWith('/api/v1/health') ||
+        event.url.pathname.startsWith('/api/v1/ready');
 
     if (!event.locals.user && !isPublic) {
         // For API calls, return 401 instead of redirect

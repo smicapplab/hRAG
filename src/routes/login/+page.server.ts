@@ -20,11 +20,13 @@ export const actions: Actions = {
         }
 
         // 1. Verify Identity
+        console.log(`[-] Login attempt for: ${email}`);
         const user = await db.query.users.findFirst({ 
             where: eq(users.email, email) 
         });
 
         if (!user) {
+            console.warn(`[!] Login failed: User not found (${email})`);
             // Constant time-ish delay or generic message for security
             return fail(401, { message: 'Invalid credentials' });
         }
@@ -32,8 +34,11 @@ export const actions: Actions = {
         // 2. Verify Secret (SHA-256 for now as per seed)
         const hash = crypto.createHash('sha256').update(password).digest('hex');
         if (hash !== user.passwordHash) {
+            console.warn(`[!] Login failed: Password mismatch for ${email}`);
             return fail(401, { message: 'Invalid credentials' });
         }
+
+        console.log(`[+] Login successful for ${email}. Issuing token...`);
 
         // 3. Resolve Effective Permissions (Iron-Clad Bridge)
         const effectiveRoles = await resolveEffectiveAccess(user.id);

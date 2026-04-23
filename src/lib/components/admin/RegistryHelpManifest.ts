@@ -116,6 +116,33 @@ export const HELP_DATA: Record<string, HelpGuide> = {
 		cons: ['Cloud tiers involve data transfer costs'],
 		tip: 'Use OLLAMA for the best balance of privacy and intelligence.',
 		cost: 'VARIABLE'
+	},
+	'chat.engine': {
+		title: 'Chat Engine (The Intelligence)',
+		description: 'The Large Language Model (LLM) that generates answers based on retrieved document fragments.',
+		pros: [
+			'OLLAMA: Fully private, runs on your hardware.',
+			'OPENAI: Highest analytical capability and reasoning.'
+		],
+		cons: ['OPENAI: Data leaves the cluster for processing.'],
+		tip: 'You can use OpenAI for Chat while keeping Embeddings local for maximum cost efficiency.',
+		cost: 'VARIABLE'
+	},
+	'chat.openai.key': {
+		title: 'Chat OpenAI API Key',
+		description: 'Specific key for the Chat LLM. Falls back to Embedding key if empty.',
+		pros: ['Allows isolating chat costs from ingestion costs.'],
+		cons: ['Requires separate configuration.'],
+		tip: 'Leave empty to share the same key as the Embedding Provider.',
+		cost: 'VARIABLE'
+	},
+	'chat.ollama.model': {
+		title: 'Chat Ollama Model',
+		description: 'The specific model name to use within Ollama for chat dialogue.',
+		pros: ['"llama3" or "mistral" are excellent general-purpose choices.'],
+		cons: ['Larger models require more VRAM.'],
+		tip: 'Ensure the model is pre-downloaded on your Ollama server using "ollama pull".',
+		cost: 'FREE'
 	}
 };
 
@@ -131,6 +158,8 @@ export function getHelp(key: string): HelpGuide | undefined {
 	if (key.startsWith('embeddings.google')) return HELP_DATA['embeddings.google.key'];
 	if (key.startsWith('vectors.qdrant')) return HELP_DATA['vectors.qdrant.url'];
 	if (key.startsWith('ingestion.chunk')) return HELP_DATA['ingestion.chunk_size'];
+	if (key.startsWith('chat.openai')) return HELP_DATA['chat.openai.key'];
+	if (key.startsWith('chat.ollama')) return HELP_DATA['chat.ollama.model'];
 
 	return undefined;
 }

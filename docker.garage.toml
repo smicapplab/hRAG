@@ -3,7 +3,7 @@ data_dir = "/data"
 db_engine = "sqlite"
 replication_factor = 1
 rpc_bind_addr = "0.0.0.0:3901"
-rpc_secret = "1b84318922dee6eccdd2bd8be2f80b6dc8f679d61e9601659c5c49af874db068"
+rpc_secret = "614e10d9a57b93ae056fce38dd2716b0e586858b595552c17403c05063787133"
 [s3_api]
 api_bind_addr = "0.0.0.0:3900"
 s3_region = "us-east-1"

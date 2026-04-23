@@ -116,14 +116,15 @@ async function seedEssential() {
         { key: 'ingestion.max_file_size', value: 50 * 1024 * 1024 }, // 50MB
         { key: 'ingestion.allowed_extensions', value: ['.pdf', '.docx', '.xlsx', '.pptx', '.txt', '.md'] },
         
+        { key: 'gateways.ollama.url', value: 'http://localhost:11434' },
+        { key: 'gateways.openai.key', value: '' },
+        { key: 'gateways.google.key', value: '' },
+
         { key: 'embeddings.provider', value: 'local' },
-        { key: 'embeddings.local.model', value: 'Xenova/all-MiniLM-L6-v2' },
-        { key: 'embeddings.ollama.model', value: 'nomic-embed-text' },
-        { key: 'embeddings.ollama.url', value: 'http://localhost:11434' },
-        { key: 'embeddings.openai.model', value: 'text-embedding-3-small' },
-        { key: 'embeddings.openai.key', value: '' },
-        { key: 'embeddings.google.model', value: 'text-embedding-004' },
-        { key: 'embeddings.google.key', value: '' },
+        { key: 'embeddings.model', value: 'Xenova/all-MiniLM-L6-v2' },
+
+        { key: 'chat.engine', value: 'OLLAMA' },
+        { key: 'chat.model', value: 'llama3' },
 
         { key: 'classification.auto_enabled', value: true },
         { key: 'classification.tier', value: 'local' },

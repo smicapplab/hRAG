@@ -1,9 +1,11 @@
 import { db } from '$lib/server/db';
 import { classificationPolicies, systemSettings, documents, apiKeys } from '$lib/server/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import type { PageServerLoad, Actions } from './$types';
 import { fail } from '@sveltejs/kit';
 import crypto from 'node:crypto';
+import { fetchOpenAIModels, fetchOllamaModels, fetchGoogleModels, type DiscoveredModel } from '$lib/server/admin/discovery';
+import { getSetting } from '$lib/server/admin/registry';
 
 export const load: PageServerLoad = async () => {
     const policies = await db.select().from(classificationPolicies);
@@ -66,6 +68,47 @@ export const actions: Actions = {
             });
         
         return { success: true };
+    },
+
+    syncModels: async ({ request, locals }) => {
+        if (!locals.user) return fail(401);
+        const data = await request.formData();
+        const provider = data.get('provider') as string;
+
+        try {
+            let models: DiscoveredModel[] = [];
+            if (provider === 'openai') {
+                const key = await getSetting('gateways.openai.key', '');
+                models = await fetchOpenAIModels(key);
+            } else if (provider === 'ollama') {
+                const url = await getSetting('gateways.ollama.url', 'http://localhost:11434');
+                models = await fetchOllamaModels(url);
+            } else if (provider === 'google') {
+                const key = await getSetting('gateways.google.key', '');
+                models = await fetchGoogleModels(key);
+            }
+
+            const registryKey = `gateways.${provider}.models`;
+            await db.insert(systemSettings)
+                .values({ 
+                    key: registryKey, 
+                    value: JSON.stringify(models), 
+                    updatedBy: locals.user.id,
+                    updatedAt: new Date()
+                })
+                .onConflictDoUpdate({
+                    target: systemSettings.key,
+                    set: { 
+                        value: JSON.stringify(models), 
+                        updatedBy: locals.user.id, 
+                        updatedAt: new Date() 
+                    }
+                });
+
+            return { success: true };
+        } catch (err: any) {
+            return fail(500, { error: err.message });
+        }
     },
 
     resolveQuarantine: async ({ request }) => {

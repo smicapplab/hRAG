@@ -129,10 +129,10 @@ export const chatSessions = sqliteTable('chat_sessions', {
 	title: text('title').notNull(),
 	createdAt: integer('created_at', { mode: 'timestamp' })
 		.notNull()
-		.default(sql`CURRENT_TIMESTAMP`),
+		.$defaultFn(() => new Date()),
 	updatedAt: integer('updated_at', { mode: 'timestamp' })
 		.notNull()
-		.default(sql`CURRENT_TIMESTAMP`)
+		.$defaultFn(() => new Date())
 });
 
 export const chatMessages = sqliteTable('chat_messages', {
@@ -145,7 +145,7 @@ export const chatMessages = sqliteTable('chat_messages', {
 	evidence: text('evidence'), // JSON string: Array<{docId: string, name: string, snippet: string}>
 	createdAt: integer('created_at', { mode: 'timestamp' })
 		.notNull()
-		.default(sql`CURRENT_TIMESTAMP`)
+		.$defaultFn(() => new Date())
 });
 
 // --- Relations ---

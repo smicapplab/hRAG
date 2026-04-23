@@ -1,5 +1,5 @@
 import { integer, sqliteTable, text, primaryKey, unique } from 'drizzle-orm/sqlite-core';
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 
 // --- Organizational Structure ---
 
@@ -117,6 +117,35 @@ export const auditLogs = sqliteTable('audit_logs', {
 	event: text('event').notNull(),
 	timestamp: integer('timestamp', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 	metadata: text('metadata') // JSON string
+});
+
+// --- Intelligence Chat ---
+
+export const chatSessions = sqliteTable('chat_sessions', {
+	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+	ownerId: text('owner_id')
+		.notNull()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	title: text('title').notNull(),
+	createdAt: integer('created_at', { mode: 'timestamp' })
+		.notNull()
+		.default(sql`CURRENT_TIMESTAMP`),
+	updatedAt: integer('updated_at', { mode: 'timestamp' })
+		.notNull()
+		.default(sql`CURRENT_TIMESTAMP`)
+});
+
+export const chatMessages = sqliteTable('chat_messages', {
+	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+	sessionId: text('session_id')
+		.notNull()
+		.references(() => chatSessions.id, { onDelete: 'cascade' }),
+	role: text('role').notNull(), // 'user', 'assistant'
+	content: text('content').notNull(),
+	evidence: text('evidence'), // JSON string: Array<{docId: string, name: string, snippet: string}>
+	createdAt: integer('created_at', { mode: 'timestamp' })
+		.notNull()
+		.default(sql`CURRENT_TIMESTAMP`)
 });
 
 // --- Relations ---

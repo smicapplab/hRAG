@@ -3,7 +3,8 @@
 	import { 
 		FileText, Download, Share2, Trash2, Tag, 
 		Shield, User, Calendar, Database, Activity,
-		Plus, X, ChevronLeft, AlertTriangle, Cpu
+		Plus, X, ChevronLeft, AlertTriangle, Cpu,
+		Check
 	} from 'lucide-svelte';
 	import { invalidateAll, goto } from '$app/navigation';
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
@@ -43,6 +44,19 @@
 			}
 		} catch (err) {
 			console.error('Failed to remove tag:', err);
+		}
+	}
+
+	async function promoteTag(tagId: string) {
+		try {
+			const response = await fetch(`/api/v1/admin/tags/${tagId}/promote`, {
+				method: 'POST'
+			});
+			if (response.ok) {
+				await invalidateAll();
+			}
+		} catch (err) {
+			console.error('Promotion failed:', err);
 		}
 	}
 
@@ -216,6 +230,15 @@
 						<div class="group flex items-center gap-2 px-2 py-1 rounded-sm border border-border bg-muted font-mono text-[11px] uppercase transition-colors hover:border-signal-blue">
 							<Tag size={10} class={tag.isAiGenerated ? 'text-signal-green' : 'text-signal-blue'} />
 							<span class="text-foreground">{tag.name}</span>
+							{#if tag.isAiGenerated && data.canEdit}
+								<button 
+									onclick={() => promoteTag(tag.id)}
+									class="text-signal-green hover:text-green-400 transition-colors"
+									title="PROMOTE TO CANONICAL"
+								>
+									<Check size={10} />
+								</button>
+							{/if}
 							{#if data.canEdit}
 								<button 
 									onclick={() => removeTag(tag.name)}

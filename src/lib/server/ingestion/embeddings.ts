@@ -21,20 +21,20 @@ export async function getEmbeddingProvider(): Promise<Embeddings> {
     // 1. Resolve Provider-Specific Config
     switch (config.provider) {
         case 'ollama':
-            config.model = await getSetting('embeddings.ollama.model', env.OLLAMA_MODEL || 'nomic-embed-text');
-            config.baseUrl = await getSetting('embeddings.ollama.url', env.OLLAMA_BASE_URL || 'http://localhost:11434');
+            config.model = await getSetting('embeddings.model', 'nomic-embed-text');
+            config.baseUrl = await getSetting('gateways.ollama.url', 'http://localhost:11434');
             break;
         case 'openai':
-            config.apiKey = await getSetting('embeddings.openai.key', env.OPENAI_API_KEY);
-            config.model = await getSetting('embeddings.openai.model', env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small');
+            config.apiKey = await getSetting('gateways.openai.key', '');
+            config.model = await getSetting('embeddings.model', 'text-embedding-3-small');
             break;
         case 'google':
-            config.apiKey = await getSetting('embeddings.google.key', env.GOOGLE_API_KEY);
-            config.model = await getSetting('embeddings.google.model', env.GOOGLE_EMBEDDING_MODEL || 'text-embedding-004');
+            config.apiKey = await getSetting('gateways.google.key', '');
+            config.model = await getSetting('embeddings.model', 'text-embedding-004');
             break;
         case 'local':
         default:
-            config.model = await getSetting('embeddings.local.model', env.LOCAL_EMBEDDING_MODEL || 'Xenova/all-MiniLM-L6-v2');
+            config.model = await getSetting('embeddings.model', 'Xenova/all-MiniLM-L6-v2');
             break;
     }
 

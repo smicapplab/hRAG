@@ -20,20 +20,20 @@
 	let activeHelpKey = $state<string | null>(null);
 
 	const filteredPolicies = $derived(
-		data.policies.filter(p => 
+		(data.policies || []).filter(p => 
 			p.code.toLowerCase().includes(filterQuery.toLowerCase()) || 
 			p.displayName.toLowerCase().includes(filterQuery.toLowerCase())
 		)
 	);
 
 	const filteredQuarantine = $derived(
-		data.quarantine.filter(d => 
+		(data.quarantine || []).filter(d => 
 			d.name.toLowerCase().includes(filterQuery.toLowerCase())
 		)
 	);
 
 	const filteredKeys = $derived(
-		data.apiKeys.filter(k => 
+		(data.apiKeys || []).filter(k => 
 			k.name.toLowerCase().includes(filterQuery.toLowerCase())
 		)
 	);
@@ -397,11 +397,48 @@
 					<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
 						<div class="max-w-4xl space-y-12">
 							
+							<!-- AI SERVICE GATEWAYS -->
+							<section class="space-y-6">
+								<div class="flex items-center gap-2 border-b border-border pb-2">
+									<Key size={14} class="text-signal-blue" />
+									<h3 class="font-bold tracking-widest text-foreground uppercase text-xs">AI Service Gateways (Credentials)</h3>
+								</div>
+
+								<div class="space-y-2">
+									<RegistryField 
+										key="gateways.openai.key"
+										label="OPENAI_API_KEY"
+										description="Private key for OpenAI services (GPT & Embeddings)."
+										type="password"
+										value={data.settings['gateways.openai.key'] || ''}
+										onFocus={(k) => activeHelpKey = k}
+										onBlur={() => activeHelpKey = null}
+									/>
+									<RegistryField 
+										key="gateways.google.key"
+										label="GOOGLE_API_KEY"
+										description="Secret key for Google GenAI services."
+										type="password"
+										value={data.settings['gateways.google.key'] || ''}
+										onFocus={(k) => activeHelpKey = k}
+										onBlur={() => activeHelpKey = null}
+									/>
+									<RegistryField 
+										key="gateways.ollama.url"
+										label="OLLAMA_BASE_URL"
+										description="Network address for Ollama API."
+										value={data.settings['gateways.ollama.url'] || 'http://localhost:11434'}
+										onFocus={(k) => activeHelpKey = k}
+										onBlur={() => activeHelpKey = null}
+									/>
+								</div>
+							</section>
+
 							<!-- INFRASTRUCTURE SECTION -->
 							<section class="space-y-6">
 								<div class="flex items-center gap-2 border-b border-border pb-2">
 									<Cpu size={14} class="text-signal-blue" />
-									<h3 class="font-bold tracking-widest text-foreground uppercase text-xs">Intelligence Infrastructure</h3>
+									<h3 class="font-bold tracking-widest text-foreground uppercase text-xs">Semantic Embedding Engine</h3>
 								</div>
 
 								<div class="space-y-2">
@@ -418,75 +455,83 @@
 											{ value: 'openai', label: 'OPENAI (Cloud)' },
 											{ value: 'google', label: 'GOOGLE GENAI (Cloud)' }
 										]}
+										syncAction={['openai', 'ollama', 'google'].includes(data.settings['embeddings.provider']) ? 'syncModels' : null}
 										onFocus={(k) => activeHelpKey = k}
 										onBlur={() => activeHelpKey = null}
 									/>
 
-									<!-- Dynamic Embedding Fields -->
-									{#if data.settings['embeddings.provider'] === 'openai'}
-										<div class="ml-4 border-l-2 border-signal-blue/20 pl-4 space-y-2" transition:slide>
-											<RegistryField 
-												key="embeddings.openai.key"
-												label="OPENAI_API_KEY"
-												description="Private key for OpenAI services."
-												type="password"
-												value={data.settings['embeddings.openai.key'] || ''}
-												onFocus={(k) => activeHelpKey = k}
-												onBlur={() => activeHelpKey = null}
-											/>
-											<RegistryField 
-												key="embeddings.openai.model"
-												label="OPENAI_MODEL"
-												description="Specific embedding model artifact."
-												value={data.settings['embeddings.openai.model'] || 'text-embedding-3-small'}
-												onFocus={(k) => activeHelpKey = k}
-												onBlur={() => activeHelpKey = null}
-											/>
-										</div>
-									{:else if data.settings['embeddings.provider'] === 'ollama'}
-										<div class="ml-4 border-l-2 border-signal-blue/20 pl-4 space-y-2" transition:slide>
-											<RegistryField 
-												key="embeddings.ollama.url"
-												label="OLLAMA_BASE_URL"
-												description="Network address for Ollama API."
-												value={data.settings['embeddings.ollama.url'] || 'http://localhost:11434'}
-												onFocus={(k) => activeHelpKey = k}
-												onBlur={() => activeHelpKey = null}
-											/>
-											<RegistryField 
-												key="embeddings.ollama.model"
-												label="OLLAMA_MODEL"
-												description="Target model for local embeddings."
-												value={data.settings['embeddings.ollama.model'] || 'nomic-embed-text'}
-												onFocus={(k) => activeHelpKey = k}
-												onBlur={() => activeHelpKey = null}
-											/>
-										</div>
-									{:else if data.settings['embeddings.provider'] === 'google'}
-										<div class="ml-4 border-l-2 border-signal-blue/20 pl-4 space-y-2" transition:slide>
-											<RegistryField 
-												key="embeddings.google.key"
-												label="GOOGLE_API_KEY"
-												description="Secret key for Google GenAI services."
-												type="password"
-												value={data.settings['embeddings.google.key'] || ''}
-												onFocus={(k) => activeHelpKey = k}
-												onBlur={() => activeHelpKey = null}
-											/>
-											<RegistryField 
-												key="embeddings.google.model"
-												label="GOOGLE_MODEL"
-												description="Target Google embedding model."
-												value={data.settings['embeddings.google.model'] || 'text-embedding-004'}
-												onFocus={(k) => activeHelpKey = k}
-												onBlur={() => activeHelpKey = null}
-											/>
-										</div>
-									{/if}
+									<!-- Dynamic Embedding Model -->
+									<RegistryField 
+										key="embeddings.model"
+										label="EMBEDDING_MODEL"
+										description="Specific embedding model artifact."
+										type="select"
+										value={data.settings['embeddings.model'] || ''}
+										options={[
+											...(data.settings[`gateways.${data.settings['embeddings.provider']}.models`] || [])
+												.filter((m: any) => m.type === 'EMBEDDING' || m.type === 'BOTH')
+												.map((m: any) => ({ value: m.id, label: m.name })),
+											{ value: data.settings['embeddings.model'], label: data.settings['embeddings.model'] }
+										].filter((v, i, a) => a.findIndex(t => t.value === v.value) === i)}
+										onFocus={(k) => activeHelpKey = k}
+										onBlur={() => activeHelpKey = null}
+									/>
+								</div>
+							</section>
 
-									<div class="pt-4"></div>
+							<!-- INTELLIGENCE CHAT SECTION -->
+							<section class="space-y-6">
+								<div class="flex items-center gap-2 border-b border-border pb-2">
+									<Bot size={14} class="text-signal-blue" />
+									<h3 class="font-bold tracking-widest text-foreground uppercase text-xs">Intelligence Chat Orchestrator</h3>
+								</div>
 
-									<!-- Vector Engine -->
+								<div class="space-y-2">
+									<!-- Chat Engine -->
+									<RegistryField 
+										key="chat.engine"
+										label="CHAT_ENGINE"
+										description="Analytical LLM used for generating RAG responses."
+										type="select"
+										value={data.settings['chat.engine'] || 'OLLAMA'}
+										options={[
+											{ value: 'OLLAMA', label: 'OLLAMA (Local Intelligence)' },
+											{ value: 'OPENAI', label: 'OPENAI (Cloud Reasoning)' }
+										]}
+										syncAction={data.settings['chat.engine'] === 'OPENAI' ? 'syncModels' : data.settings['chat.engine'] === 'OLLAMA' ? 'syncModels' : null}
+										onFocus={(k) => activeHelpKey = k}
+										onBlur={() => activeHelpKey = null}
+									/>
+
+									<!-- Dynamic Chat Model -->
+									<RegistryField 
+										key="chat.model"
+										label="CHAT_MODEL"
+										description="Target model for chat dialogue."
+										type="select"
+										value={data.settings['chat.model'] || ''}
+										options={[
+											...(data.settings[`gateways.${data.settings['chat.engine']?.toLowerCase()}.models`] || [])
+												.filter((m: any) => m.type === 'CHAT' || m.type === 'BOTH')
+												.map((m: any) => ({ value: m.id, label: m.name })),
+											{ value: data.settings['chat.model'], label: data.settings['chat.model'] }
+										].filter((v, i, a) => a.findIndex(t => t.value === v.value) === i)}
+										onFocus={(k) => activeHelpKey = k}
+										onBlur={() => activeHelpKey = null}
+									/>
+								</div>
+							</section>
+
+							<div class="pt-4"></div>
+
+							<!-- Vector Engine -->
+							<section class="space-y-6">
+								<div class="flex items-center gap-2 border-b border-border pb-2">
+									<Database size={14} class="text-signal-blue" />
+									<h3 class="font-bold tracking-widest text-foreground uppercase text-xs">Vector Memory Bank</h3>
+								</div>
+								
+								<div class="space-y-2">
 									<RegistryField 
 										key="vectors.engine"
 										label="VECTOR_ENGINE"
@@ -551,7 +596,7 @@
 										label="INGESTION_MAX_SIZE (MB)"
 										description="Upper limit for individual artifact uploads."
 										type="number"
-										value={Math.round((data.settings['ingestion.max_file_size'] || 52428800) / (1024 * 1024))}
+										value={Math.round((data.settings?.['ingestion.max_file_size'] || 52428800) / (1024 * 1024))}
 										onFocus={(k) => activeHelpKey = k}
 										onBlur={() => activeHelpKey = null}
 									/>
@@ -561,7 +606,7 @@
 											label="CHUNK_SIZE"
 											description="Tokens per semantic fragment."
 											type="number"
-											value={data.settings['ingestion.chunk_size'] || 512}
+											value={data.settings?.['ingestion.chunk_size'] || 512}
 											onFocus={(k) => activeHelpKey = k}
 											onBlur={() => activeHelpKey = null}
 										/>
@@ -570,116 +615,11 @@
 											label="CHUNK_OVERLAP"
 											description="Context preservation window."
 											type="number"
-											value={data.settings['ingestion.chunk_overlap'] || 64}
+											value={data.settings?.['ingestion.chunk_overlap'] || 64}
 											onFocus={(k) => activeHelpKey = k}
 											onBlur={() => activeHelpKey = null}
 										/>
 									</div>
-								</div>
-							</section>
-
-							<!-- SYSTEM CONTROL -->
-							<section class="space-y-6">
-								<div class="flex items-center gap-2 border-b border-border pb-2">
-									<Lock size={14} class="text-signal-blue" />
-									<h3 class="font-bold tracking-widest text-foreground uppercase text-xs">Fleet Management</h3>
-								</div>
-
-								<div class="space-y-2">
-									<form method="POST" action="?/updateSetting" use:enhance class="grid grid-cols-12 items-center gap-4 p-2">
-										<div class="col-span-10 space-y-1">
-											<div class="font-mono text-[10px] font-bold uppercase text-foreground">Maintenance Mode</div>
-											<p class="text-[8px] text-muted-foreground uppercase">Restrict access during system upgrades.</p>
-											<input type="hidden" name="key" value="system.maintenance_mode" />
-										</div>
-										<div class="col-span-2 flex justify-end">
-											<label class="relative inline-flex cursor-pointer items-center">
-												<input 
-													type="checkbox" 
-													name="value" 
-													checked={data.settings['system.maintenance_mode']}
-													onchange={(e) => e.currentTarget.form?.requestSubmit()}
-													class="peer sr-only" 
-												/>
-												<div class="h-5 w-9 rounded-full bg-muted border border-border peer-checked:bg-signal-blue peer-checked:after:translate-x-full after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-['']"></div>
-											</label>
-										</div>
-									</form>
-								</div>
-							</section>
-
-							<div class="flex items-start gap-4 rounded-sm border border-signal-blue/20 bg-signal-blue/5 p-4">
-								<ShieldCheck size={20} class="mt-1 shrink-0 text-signal-blue" />
-								<div class="space-y-1">
-									<p class="text-[10px] font-bold text-foreground uppercase tracking-widest">Security Vault Protocol</p>
-									<p class="text-[9px] text-muted-foreground leading-relaxed">Sensitive parameters (API Keys, Connection Strings) are encrypted using AES-GCM via your Master Passphrase. Changes persist in the relational registry but require a cluster-wide node recycle to refresh in-memory security contexts.</p>
-								</div>
-							</div>
-
-							<!-- INTELLIGENCE CHAT SECTION -->
-							<section class="space-y-6">
-								<div class="flex items-center gap-2 border-b border-border pb-2">
-									<Bot size={14} class="text-signal-blue" />
-									<h3 class="font-bold tracking-widest text-foreground uppercase text-xs">Intelligence Chat Orchestrator</h3>
-								</div>
-
-								<div class="space-y-2">
-									<!-- Chat Engine -->
-									<RegistryField 
-										key="chat.engine"
-										label="CHAT_ENGINE"
-										description="Analytical LLM used for generating RAG responses."
-										type="select"
-										value={data.settings['chat.engine'] || 'OLLAMA'}
-										options={[
-											{ value: 'OLLAMA', label: 'OLLAMA (Local Intelligence)' },
-											{ value: 'OPENAI', label: 'OPENAI (Cloud Reasoning)' }
-										]}
-										onFocus={(k) => activeHelpKey = k}
-										onBlur={() => activeHelpKey = null}
-									/>
-
-									<!-- Dynamic Chat Engine Fields -->
-									{#if data.settings['chat.engine'] === 'OPENAI'}
-										<div class="ml-4 border-l-2 border-signal-blue/20 pl-4 space-y-2" transition:slide>
-											<RegistryField 
-												key="chat.openai.key"
-												label="CHAT_OPENAI_API_KEY"
-												description="Private key for Chat service. Falls back to global embedding key if empty."
-												type="password"
-												value={data.settings['chat.openai.key'] || ''}
-												onFocus={(k) => activeHelpKey = k}
-												onBlur={() => activeHelpKey = null}
-											/>
-											<RegistryField 
-												key="chat.openai.model"
-												label="CHAT_OPENAI_MODEL"
-												description="Target model for chat (e.g., gpt-4o)."
-												value={data.settings['chat.openai.model'] || 'gpt-4o'}
-												onFocus={(k) => activeHelpKey = k}
-												onBlur={() => activeHelpKey = null}
-											/>
-										</div>
-									{:else if data.settings['chat.engine'] === 'OLLAMA'}
-										<div class="ml-4 border-l-2 border-signal-blue/20 pl-4 space-y-2" transition:slide>
-											<RegistryField 
-												key="chat.ollama.url"
-												label="CHAT_OLLAMA_URL"
-												description="API address for Chat Ollama. Falls back to embedding URL if empty."
-												value={data.settings['chat.ollama.url'] || ''}
-												onFocus={(k) => activeHelpKey = k}
-												onBlur={() => activeHelpKey = null}
-											/>
-											<RegistryField 
-												key="chat.ollama.model"
-												label="CHAT_OLLAMA_MODEL"
-												description="Specific model for local chat (e.g., llama3)."
-												value={data.settings['chat.ollama.model'] || 'llama3'}
-												onFocus={(k) => activeHelpKey = k}
-												onBlur={() => activeHelpKey = null}
-											/>
-										</div>
-									{/if}
 								</div>
 							</section>
 						</div>

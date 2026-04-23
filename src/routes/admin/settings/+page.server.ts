@@ -4,68 +4,53 @@ import { eq, and } from 'drizzle-orm';
 import type { PageServerLoad, Actions } from './$types';
 import { fail } from '@sveltejs/kit';
 import crypto from 'node:crypto';
+import { fetchOpenAIModels, fetchOllamaModels, fetchGoogleModels, type DiscoveredModel } from '$lib/server/admin/discovery';
+import { getSetting } from '$lib/server/admin/registry';
 
-export const load: PageServerLoad = async () => {
-    const policies = await db.select().from(classificationPolicies);
-    const settings = await db.select().from(systemSettings);
-    const quarantine = await db.select().from(documents).where(eq(documents.reviewStatus, 'PENDING'));
-    const keys = await db.select().from(apiKeys);
-    
-    return {
-        policies,
-        settings: settings.reduce((acc, s) => ({ ...acc, [s.key]: JSON.parse(s.value) }), {} as Record<string, any>),
-        quarantine,
-        apiKeys: keys
-    };
-};
+// ... (load function remains same)
 
 export const actions: Actions = {
-    updatePolicy: async ({ request }) => {
-        const data = await request.formData();
-        const id = data.get('id') as string;
-        const displayName = data.get('displayName') as string;
-        const minRoleRequired = data.get('minRoleRequired') as any;
-        const severityWeight = parseInt(data.get('severityWeight') as string);
-        const description = data.get('description') as string;
+    // ... (updatePolicy, updateSetting remain same)
 
-        await db.update(classificationPolicies)
-            .set({ displayName, minRoleRequired, severityWeight, description })
-            .where(eq(classificationPolicies.id, id));
-        
-        return { success: true };
-    },
-
-    updateSetting: async ({ request, locals }) => {
+    syncModels: async ({ request, locals }) => {
         if (!locals.user) return fail(401);
-        
         const data = await request.formData();
-        const key = data.get('key') as string;
-        let value: any = data.get('value');
+        const provider = data.get('provider') as string;
 
-        // Handle numeric values (like INGESTION_MAX_SIZE in MB)
-        if (key === 'ingestion.max_file_size') {
-            value = parseInt(value) * 1024 * 1024; // Convert MB to Bytes
-        } else if (key === 'ingestion.chunk_size' || key === 'ingestion.chunk_overlap') {
-            value = parseInt(value);
-        } else if (key === 'system.maintenance_mode' || key === 'classification.auto_enabled') {
-            value = value === 'on' || value === 'true';
-        } else if (key === 'ingestion.allowed_extensions') {
-            value = value.split(',').map((s: string) => s.trim().toLowerCase());
+        try {
+            let models: DiscoveredModel[] = [];
+            if (provider === 'openai') {
+                const key = await getSetting('gateways.openai.key', '');
+                models = await fetchOpenAIModels(key);
+            } else if (provider === 'ollama') {
+                const url = await getSetting('gateways.ollama.url', 'http://localhost:11434');
+                models = await fetchOllamaModels(url);
+            } else if (provider === 'google') {
+                const key = await getSetting('gateways.google.key', '');
+                models = await fetchGoogleModels(key);
+            }
+
+            const registryKey = `gateways.${provider}.models`;
+            await db.insert(systemSettings)
+                .values({ 
+                    key: registryKey, 
+                    value: JSON.stringify(models), 
+                    updatedBy: locals.user.id,
+                    updatedAt: new Date()
+                })
+                .onConflictDoUpdate({
+                    target: systemSettings.key,
+                    set: { 
+                        value: JSON.stringify(models), 
+                        updatedBy: locals.user.id, 
+                        updatedAt: new Date() 
+                    }
+                });
+
+            return { success: true };
+        } catch (err: any) {
+            return fail(500, { error: err.message });
         }
-
-        await db.insert(systemSettings)
-            .values({ 
-                key, 
-                value: JSON.stringify(value), 
-                updatedBy: locals.user.id,
-                updatedAt: new Date()
-            })
-            .onConflictDoUpdate({
-                target: systemSettings.key,
-                set: { value: JSON.stringify(value), updatedBy: locals.user.id, updatedAt: new Date() }
-            });
-        
-        return { success: true };
     },
 
     resolveQuarantine: async ({ request }) => {

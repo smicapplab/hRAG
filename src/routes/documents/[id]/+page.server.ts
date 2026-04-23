@@ -44,6 +44,9 @@ export const load: PageServerLoad = async ({ params, locals }) => {
         }
     }
 
+    // 3.1 Taxonomy Governance: Only Admins or Managers can create new canonical tags
+    const canCreateTag = locals.user.isAdmin || (doc.groupId && locals.user.groupRoles[doc.groupId] === 'MANAGER');
+
     // 4. Fetch associated tags
     const activeTags = await db.select({
         id: schema.tags.id,
@@ -85,6 +88,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
         activeTags,
         suggestedTags: suggestedTags || [],
         canEdit,
+        canCreateTag,
         isOwner
     };
 };

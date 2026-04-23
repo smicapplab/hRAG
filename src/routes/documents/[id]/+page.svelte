@@ -259,23 +259,27 @@
 							<input 
 								type="text" 
 								bind:value={newTagName}
-								placeholder="SEARCH OR ADD TAXONOMY LABEL..."
+								placeholder={data.canCreateTag ? "SEARCH OR CREATE NEW LABEL..." : "SEARCH EXISTING LABELS..."}
 								class="flex-1 h-9 rounded-sm border border-border bg-muted/50 px-4 font-mono text-[11px] uppercase outline-none focus:border-signal-blue"
-								onkeydown={(e) => e.key === 'Enter' && addTag(newTagName)}
+								onkeydown={(e) => e.key === 'Enter' && (data.canCreateTag || data.suggestedTags.some(t => t.name === newTagName.trim().toUpperCase())) && addTag(newTagName)}
 							/>
-							<button 
-								onclick={() => addTag(newTagName)}
-								class="h-9 px-4 bg-signal-blue text-white text-[10px] font-bold uppercase tracking-widest rounded-sm hover:bg-blue-600 transition-colors"
-							>
-								Commit
-							</button>
+							{#if data.canCreateTag}
+								<button 
+									onclick={() => addTag(newTagName)}
+									class="h-9 px-4 bg-signal-blue text-white text-[10px] font-bold uppercase tracking-widest rounded-sm hover:bg-blue-600 transition-colors"
+								>
+									Commit
+								</button>
+							{/if}
 						</div>
 
 						{#if data.suggestedTags.length > 0}
 							<div>
-								<span class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-3 block">Available System Taxonomy</span>
+								<span class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-3 block">
+									{data.canCreateTag ? 'Available System Taxonomy' : 'Select from Registry'}
+								</span>
 								<div class="flex flex-wrap gap-2">
-									{#each data.suggestedTags as tag}
+									{#each data.suggestedTags.filter(t => t.name.includes(newTagName.trim().toUpperCase())) as tag}
 										<button 
 											onclick={() => addTag(tag.name)}
 											class="px-2 py-1.5 rounded-sm border border-border bg-muted/30 text-[10px] font-mono text-muted-foreground uppercase hover:border-signal-blue hover:text-signal-blue hover:bg-signal-blue/5 transition-all flex items-center gap-2 group"

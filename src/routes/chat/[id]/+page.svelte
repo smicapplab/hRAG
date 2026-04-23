@@ -15,12 +15,12 @@
 
   let { data }: { data: { session: any, messages: ChatMessage[] } } = $props();
   let query = $state('');
-  let messages = $state<ChatMessage[]>(data.messages);
+  let messages = $state<ChatMessage[]>([]);
   let isSending = $state(false);
   let activeSource = $state<any>(null);
   let chatHistory = getContext<any>('chatHistory');
 
-  let scrollContainer: HTMLDivElement;
+  let scrollContainer: HTMLDivElement | undefined = $state();
 
   async function scrollToBottom() {
     await tick();

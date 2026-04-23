@@ -20,20 +20,20 @@
 	let activeHelpKey = $state<string | null>(null);
 
 	const filteredPolicies = $derived(
-		(data.policies || []).filter(p => 
+		(data?.policies || []).filter(p => 
 			p.code.toLowerCase().includes(filterQuery.toLowerCase()) || 
 			p.displayName.toLowerCase().includes(filterQuery.toLowerCase())
 		)
 	);
 
 	const filteredQuarantine = $derived(
-		(data.quarantine || []).filter(d => 
+		(data?.quarantine || []).filter(d => 
 			d.name.toLowerCase().includes(filterQuery.toLowerCase())
 		)
 	);
 
 	const filteredKeys = $derived(
-		(data.apiKeys || []).filter(k => 
+		(data?.apiKeys || []).filter(k => 
 			k.name.toLowerCase().includes(filterQuery.toLowerCase())
 		)
 	);
@@ -64,9 +64,9 @@
 				class="relative px-3 py-1 text-[10px] font-bold tracking-widest uppercase transition-all {activeTab === 'quarantine' ? 'bg-signal-blue text-white shadow-lg' : 'text-muted-foreground hover:text-foreground'}"
 			>
 				Quarantine
-				{#if data.quarantine.length > 0}
+				{#if data.quarantine?.length > 0}
 					<span class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-signal-orange text-[8px] font-bold text-white shadow-lg">
-						{data.quarantine.length}
+						{data.quarantine?.length}
 					</span>
 				{/if}
 			</button>
@@ -209,7 +209,7 @@
 			<!-- QUARANTINE TAB -->
 			{:else if activeTab === 'quarantine'}
 				<div class="h-full flex flex-col overflow-hidden" in:fade={{ duration: 150 }}>
-					{#if data.quarantine.length === 0}
+					{#if !data.quarantine || data.quarantine.length === 0}
 						<div class="flex flex-1 flex-col items-center justify-center space-y-4 opacity-50">
 							<CheckCircle2 size={48} class="text-signal-green" />
 							<p class="font-mono text-[10px] tracking-widest uppercase">Registry Clean: No pending security reviews</p>
@@ -410,7 +410,7 @@
 										label="OPENAI_API_KEY"
 										description="Private key for OpenAI services (GPT & Embeddings)."
 										type="password"
-										value={data.settings['gateways.openai.key'] || ''}
+										value={data.settings?.['gateways.openai.key'] || ''}
 										onFocus={(k) => activeHelpKey = k}
 										onBlur={() => activeHelpKey = null}
 									/>
@@ -419,7 +419,7 @@
 										label="GOOGLE_API_KEY"
 										description="Secret key for Google GenAI services."
 										type="password"
-										value={data.settings['gateways.google.key'] || ''}
+										value={data.settings?.['gateways.google.key'] || ''}
 										onFocus={(k) => activeHelpKey = k}
 										onBlur={() => activeHelpKey = null}
 									/>
@@ -427,7 +427,7 @@
 										key="gateways.ollama.url"
 										label="OLLAMA_BASE_URL"
 										description="Network address for Ollama API."
-										value={data.settings['gateways.ollama.url'] || 'http://localhost:11434'}
+										value={data.settings?.['gateways.ollama.url'] || 'http://localhost:11434'}
 										onFocus={(k) => activeHelpKey = k}
 										onBlur={() => activeHelpKey = null}
 									/>
@@ -448,14 +448,14 @@
 										label="EMBEDDING_PROVIDER"
 										description="Core text-to-vector translation engine."
 										type="select"
-										value={data.settings['embeddings.provider'] || 'local'}
+										value={data.settings?.['embeddings.provider'] || 'local'}
 										options={[
 											{ value: 'local', label: 'LOCAL WASM (@xenova)' },
 											{ value: 'ollama', label: 'OLLAMA (Local API)' },
 											{ value: 'openai', label: 'OPENAI (Cloud)' },
 											{ value: 'google', label: 'GOOGLE GENAI (Cloud)' }
 										]}
-										syncAction={['openai', 'ollama', 'google'].includes(data.settings['embeddings.provider']) ? 'syncModels' : null}
+										syncAction={['openai', 'ollama', 'google'].includes(data.settings?.['embeddings.provider']) ? 'syncModels' : null}
 										onFocus={(k) => activeHelpKey = k}
 										onBlur={() => activeHelpKey = null}
 									/>
@@ -466,12 +466,12 @@
 										label="EMBEDDING_MODEL"
 										description="Specific embedding model artifact."
 										type="select"
-										value={data.settings['embeddings.model'] || ''}
+										value={data.settings?.['embeddings.model'] || ''}
 										options={[
-											...(data.settings[`gateways.${data.settings['embeddings.provider']}.models`] || [])
+											...(data.settings?.[`gateways.${data.settings?.['embeddings.provider']}.models`] || [])
 												.filter((m: any) => m.type === 'EMBEDDING' || m.type === 'BOTH')
 												.map((m: any) => ({ value: m.id, label: m.name })),
-											{ value: data.settings['embeddings.model'], label: data.settings['embeddings.model'] }
+											{ value: data.settings?.['embeddings.model'], label: data.settings?.['embeddings.model'] }
 										].filter((v, i, a) => a.findIndex(t => t.value === v.value) === i)}
 										onFocus={(k) => activeHelpKey = k}
 										onBlur={() => activeHelpKey = null}
@@ -493,12 +493,12 @@
 										label="CHAT_ENGINE"
 										description="Analytical LLM used for generating RAG responses."
 										type="select"
-										value={data.settings['chat.engine'] || 'OLLAMA'}
+										value={data.settings?.['chat.engine'] || 'OLLAMA'}
 										options={[
 											{ value: 'OLLAMA', label: 'OLLAMA (Local Intelligence)' },
 											{ value: 'OPENAI', label: 'OPENAI (Cloud Reasoning)' }
 										]}
-										syncAction={data.settings['chat.engine'] === 'OPENAI' ? 'syncModels' : data.settings['chat.engine'] === 'OLLAMA' ? 'syncModels' : null}
+										syncAction={data.settings?.['chat.engine'] === 'OPENAI' ? 'syncModels' : data.settings?.['chat.engine'] === 'OLLAMA' ? 'syncModels' : null}
 										onFocus={(k) => activeHelpKey = k}
 										onBlur={() => activeHelpKey = null}
 									/>
@@ -509,12 +509,12 @@
 										label="CHAT_MODEL"
 										description="Target model for chat dialogue."
 										type="select"
-										value={data.settings['chat.model'] || ''}
+										value={data.settings?.['chat.model'] || ''}
 										options={[
-											...(data.settings[`gateways.${data.settings['chat.engine']?.toLowerCase()}.models`] || [])
+											...(data.settings?.[`gateways.${data.settings?.['chat.engine']?.toLowerCase()}.models`] || [])
 												.filter((m: any) => m.type === 'CHAT' || m.type === 'BOTH')
 												.map((m: any) => ({ value: m.id, label: m.name })),
-											{ value: data.settings['chat.model'], label: data.settings['chat.model'] }
+											{ value: data.settings?.['chat.model'], label: data.settings?.['chat.model'] }
 										].filter((v, i, a) => a.findIndex(t => t.value === v.value) === i)}
 										onFocus={(k) => activeHelpKey = k}
 										onBlur={() => activeHelpKey = null}
@@ -537,7 +537,7 @@
 										label="VECTOR_ENGINE"
 										description="Primary storage backend for semantic chunks."
 										type="select"
-										value={data.settings['vectors.engine'] || 'lancedb'}
+										value={data.settings?.['vectors.engine'] || 'lancedb'}
 										options={[
 											{ value: 'lancedb', label: 'LANCEDB (S3-Native)' },
 											{ value: 'pgvector', label: 'PGVECTOR (Enterprise)' },
@@ -547,25 +547,25 @@
 										onBlur={() => activeHelpKey = null}
 									/>
 
-									{#if data.settings['vectors.engine'] === 'pgvector'}
+									{#if data.settings?.['vectors.engine'] === 'pgvector'}
 										<div class="ml-4 border-l-2 border-signal-blue/20 pl-4 space-y-2" transition:slide>
 											<RegistryField 
 												key="vectors.pg.url"
 												label="PG_CONNECTION_URL"
 												description="Postgres connection string (with pgvector)."
 												type="password"
-												value={data.settings['vectors.pg.url'] || ''}
+												value={data.settings?.['vectors.pg.url'] || ''}
 												onFocus={(k) => activeHelpKey = k}
 												onBlur={() => activeHelpKey = null}
 											/>
 										</div>
-									{:else if data.settings['vectors.engine'] === 'qdrant'}
+									{:else if data.settings?.['vectors.engine'] === 'qdrant'}
 										<div class="ml-4 border-l-2 border-signal-blue/20 pl-4 space-y-2" transition:slide>
 											<RegistryField 
 												key="vectors.qdrant.url"
 												label="QDRANT_API_ENDPOINT"
 												description="URL for the Qdrant service."
-												value={data.settings['vectors.qdrant.url'] || ''}
+												value={data.settings?.['vectors.qdrant.url'] || ''}
 												onFocus={(k) => activeHelpKey = k}
 												onBlur={() => activeHelpKey = null}
 											/>
@@ -574,7 +574,7 @@
 												label="QDRANT_API_KEY"
 												description="Secret key for Qdrant (if enabled)."
 												type="password"
-												value={data.settings['vectors.qdrant.key'] || ''}
+												value={data.settings?.['vectors.qdrant.key'] || ''}
 												onFocus={(k) => activeHelpKey = k}
 												onBlur={() => activeHelpKey = null}
 											/>

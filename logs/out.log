@@ -18,3 +18,33 @@
 2026-04-23 17:47:17: [+] Security chain established. Node is operational.
 2026-04-23 17:47:17: [+] Heartbeat monitoring active (60s interval).
 2026-04-23 17:47:17: ------------------------------------------------
+2026-04-23 19:42:31: ------------------------------------------------
+2026-04-23 19:42:31: hRAG CONTROL ROOM: SECURITY BOOTSTRAP
+2026-04-23 19:42:31: Node ID: Steves-MacBook-Pro.local-bc0a724b
+2026-04-23 19:42:31: ------------------------------------------------
+2026-04-23 19:42:31: [-] Retrieving secure blob from Garage S3...
+2026-04-23 19:42:31: Listening on http://0.0.0.0:3000
+2026-04-23 19:42:31: [-] Decrypting JWT secret material...
+2026-04-23 19:42:31: [+] Security chain established. Node is operational.
+2026-04-23 19:42:31: [+] Heartbeat monitoring active (60s interval).
+2026-04-23 19:42:31: ------------------------------------------------
+2026-04-23 19:51:10: ------------------------------------------------
+2026-04-23 19:51:10: hRAG CONTROL ROOM: SECURITY BOOTSTRAP
+2026-04-23 19:51:10: Node ID: Steves-MacBook-Pro.local-7a49438c
+2026-04-23 19:51:10: ------------------------------------------------
+2026-04-23 19:51:10: [-] Retrieving secure blob from Garage S3...
+2026-04-23 19:51:10: Listening on http://0.0.0.0:3000
+2026-04-23 19:51:10: [-] Decrypting JWT secret material...
+2026-04-23 19:51:10: [+] Security chain established. Node is operational.
+2026-04-23 19:51:10: [+] Heartbeat monitoring active (60s interval).
+2026-04-23 19:51:10: ------------------------------------------------
+2026-04-23 20:03:51: ------------------------------------------------
+2026-04-23 20:03:51: hRAG CONTROL ROOM: SECURITY BOOTSTRAP
+2026-04-23 20:03:51: Node ID: Steves-MacBook-Pro.local-32f220a0
+2026-04-23 20:03:51: ------------------------------------------------
+2026-04-23 20:03:51: [-] Retrieving secure blob from Garage S3...
+2026-04-23 20:03:51: Listening on http://0.0.0.0:3000
+2026-04-23 20:03:51: [-] Decrypting JWT secret material...
+2026-04-23 20:03:51: [+] Security chain established. Node is operational.
+2026-04-23 20:03:51: [+] Heartbeat monitoring active (60s interval).
+2026-04-23 20:03:51: ------------------------------------------------

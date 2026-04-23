@@ -44,6 +44,8 @@
 </script>
 
 <div 
+	role="group"
+	aria-label="Registry setting field"
 	class="grid grid-cols-12 items-center gap-4 rounded-sm border border-transparent p-2 transition-all hover:bg-muted/10 {isFocused ? 'bg-muted/20 border-border/50' : ''}"
 	onmouseenter={() => onFocus(key)}
 	onmouseleave={() => onBlur()}

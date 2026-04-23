@@ -94,28 +94,42 @@ export async function suggestTags(text: string): Promise<string[]> {
         }
     }
 
-    // 2. Semantic Vector Matching (Fallback/Refinement)
+    // 2. Semantic Vector Matching (Taxonomy-First Refinement)
     try {
         const docVector = await generateQueryEmbedding(text.slice(0, 1000));
-        const allTags = await db.select().from(tagsTable);
         
-        // We embed tag names on the fly. 
-        // Note: For large tag sets, we would pre-index these in a separate LanceDB table.
-        for (const tag of allTags) {
-            if (suggestions.includes(tag.name)) continue;
-            
-            const tagVector = await generateQueryEmbedding(tag.name);
-            
-            // Cosine Similarity
-            const dotProduct = docVector.reduce((acc, val, i) => acc + val * tagVector[i], 0);
-            const magA = Math.sqrt(docVector.reduce((acc, val) => acc + val * val, 0));
-            const magB = Math.sqrt(tagVector.reduce((acc, val) => acc + val * val, 0));
-            const similarity = dotProduct / (magA * magB);
+        // Load existing tags, prioritizing Canonical (Managed) ones
+        const allTags = await db.select().from(tagsTable);
+        const canonicalTags = allTags.filter(t => !t.isAiGenerated);
+        const aiTags = allTags.filter(t => t.isAiGenerated);
 
-            if (similarity > 0.7) { 
-                suggestions.push(tag.name);
+        // Sub-Logic: Try to match Canonical tags first to prevent taxonomy sprawl
+        const matchTag = async (tagList: typeof allTags, threshold: number) => {
+            for (const tag of tagList) {
+                if (suggestions.includes(tag.name)) continue;
+                
+                const tagVector = await generateQueryEmbedding(tag.name);
+                
+                // Cosine Similarity
+                const dotProduct = docVector.reduce((acc, val, i) => acc + val * tagVector[i], 0);
+                const magA = Math.sqrt(docVector.reduce((acc, val) => acc + val * val, 0));
+                const magB = Math.sqrt(tagVector.reduce((acc, val) => acc + val * val, 0));
+                const similarity = dotProduct / (magA * magB);
+
+                if (similarity > threshold) { 
+                    suggestions.push(tag.name);
+                }
             }
+        };
+
+        // Match against Canonical with a slightly more lenient threshold
+        await matchTag(canonicalTags, 0.65);
+        
+        // Only match against existing AI tags if nothing strong was found in Canonical
+        if (suggestions.length === 0) {
+            await matchTag(aiTags, 0.75);
         }
+
     } catch (err) {
         console.warn('[Classifier] Semantic tagging failed, falling back to keywords:', err);
     }

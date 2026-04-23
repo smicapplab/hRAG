@@ -128,6 +128,12 @@ async function seedEssential() {
         { key: 'classification.auto_enabled', value: true },
         { key: 'classification.tier', value: 'local' },
 
+        { key: 'chat.engine', value: 'OLLAMA' },
+        { key: 'chat.openai.key', value: '' },
+        { key: 'chat.openai.model', value: 'gpt-4o' },
+        { key: 'chat.ollama.model', value: 'llama3' },
+        { key: 'chat.ollama.url', value: 'http://localhost:11434' },
+
         { key: 'vectors.pg.url', value: process.env.DATABASE_URL || '' }
     ];
 

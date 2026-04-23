@@ -4,7 +4,7 @@
 		Settings, Shield, Zap, Lock, Database, Info, 
 		CheckCircle2, AlertTriangle, ChevronRight, 
 		Plus, Trash2, Save, Search, Filter, Eye, AlertCircle, Key,
-		Cpu, ShieldCheck
+		Cpu, ShieldCheck, Bot
 	} from 'lucide-svelte';
 	import { enhance } from '$app/forms';
 	import { slide, fade } from 'svelte/transition';
@@ -615,6 +615,73 @@
 									<p class="text-[9px] text-muted-foreground leading-relaxed">Sensitive parameters (API Keys, Connection Strings) are encrypted using AES-GCM via your Master Passphrase. Changes persist in the relational registry but require a cluster-wide node recycle to refresh in-memory security contexts.</p>
 								</div>
 							</div>
+
+							<!-- INTELLIGENCE CHAT SECTION -->
+							<section class="space-y-6">
+								<div class="flex items-center gap-2 border-b border-border pb-2">
+									<Bot size={14} class="text-signal-blue" />
+									<h3 class="font-bold tracking-widest text-foreground uppercase text-xs">Intelligence Chat Orchestrator</h3>
+								</div>
+
+								<div class="space-y-2">
+									<!-- Chat Engine -->
+									<RegistryField 
+										key="chat.engine"
+										label="CHAT_ENGINE"
+										description="Analytical LLM used for generating RAG responses."
+										type="select"
+										value={data.settings['chat.engine'] || 'OLLAMA'}
+										options={[
+											{ value: 'OLLAMA', label: 'OLLAMA (Local Intelligence)' },
+											{ value: 'OPENAI', label: 'OPENAI (Cloud Reasoning)' }
+										]}
+										onFocus={(k) => activeHelpKey = k}
+										onBlur={() => activeHelpKey = null}
+									/>
+
+									<!-- Dynamic Chat Engine Fields -->
+									{#if data.settings['chat.engine'] === 'OPENAI'}
+										<div class="ml-4 border-l-2 border-signal-blue/20 pl-4 space-y-2" transition:slide>
+											<RegistryField 
+												key="chat.openai.key"
+												label="CHAT_OPENAI_API_KEY"
+												description="Private key for Chat service. Falls back to global embedding key if empty."
+												type="password"
+												value={data.settings['chat.openai.key'] || ''}
+												onFocus={(k) => activeHelpKey = k}
+												onBlur={() => activeHelpKey = null}
+											/>
+											<RegistryField 
+												key="chat.openai.model"
+												label="CHAT_OPENAI_MODEL"
+												description="Target model for chat (e.g., gpt-4o)."
+												value={data.settings['chat.openai.model'] || 'gpt-4o'}
+												onFocus={(k) => activeHelpKey = k}
+												onBlur={() => activeHelpKey = null}
+											/>
+										</div>
+									{:else if data.settings['chat.engine'] === 'OLLAMA'}
+										<div class="ml-4 border-l-2 border-signal-blue/20 pl-4 space-y-2" transition:slide>
+											<RegistryField 
+												key="chat.ollama.url"
+												label="CHAT_OLLAMA_URL"
+												description="API address for Chat Ollama. Falls back to embedding URL if empty."
+												value={data.settings['chat.ollama.url'] || ''}
+												onFocus={(k) => activeHelpKey = k}
+												onBlur={() => activeHelpKey = null}
+											/>
+											<RegistryField 
+												key="chat.ollama.model"
+												label="CHAT_OLLAMA_MODEL"
+												description="Specific model for local chat (e.g., llama3)."
+												value={data.settings['chat.ollama.model'] || 'llama3'}
+												onFocus={(k) => activeHelpKey = k}
+												onBlur={() => activeHelpKey = null}
+											/>
+										</div>
+									{/if}
+								</div>
+							</section>
 						</div>
 					</div>
 

@@ -5,18 +5,22 @@
   let { 
     nodeName = 'node-01', 
     isPrimary = true, 
-    user = { name: 'Super User', email: 'admin@hrag.local' },
+    user = { name: 'Super User', email: 'admin@hrag.local', isAdmin: true, isCompliance: true },
     isOpen = true,
     onClose = () => {}
   }: {
     nodeName?: string;
     isPrimary?: boolean;
-    user?: { name: string; email: string };
+    user?: { name: string; email: string; isAdmin?: boolean; isCompliance?: boolean };
     isOpen?: boolean;
     onClose?: () => void;
   } = $props();
 
-  const allNavItems = [
+  const allNavItems: Array<{
+    title: string;
+    adminOnly?: boolean;
+    items: Array<{ label: string; icon: any; href: string; compliance?: boolean }>;
+  }> = [
     {
       title: 'Intelligence',
       items: [

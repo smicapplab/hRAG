@@ -83,6 +83,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         ingestionQueue.addJob({
             id: crypto.randomUUID(),
             docId: doc.id,
+            name: file.name, // NEW: Pass filename for metadata
             s3Key,
             mimeType: file.type,
             ownerId: locals.user.id,

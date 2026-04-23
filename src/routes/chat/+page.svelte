@@ -1,118 +1,42 @@
 <script lang="ts">
-  import { Send, Bot, FileText, ChevronRight } from 'lucide-svelte';
-  import { getContext } from 'svelte';
+    import { onMount } from 'svelte';
+    import { goto } from '$app/navigation';
+    import { Loader2, PlusCircle } from 'lucide-svelte';
 
-  let query = $state('');
-  const chatHistory = getContext<any>('chatHistory');
+    let loading = $state(false);
 
-  const messages = [
-    {
-      role: 'user',
-      content: 'How did our Asian revenue grow in Q4?'
-    },
-    {
-      role: 'assistant',
-      content: 'Asian revenue grew by 14% in Q4, primarily driven by enterprise software licensing in Singapore and Vietnam. Key growth factors included new government contracts and infrastructure logistics optimization.',
-      evidence: [
-        { name: 'field_ops_logistics.md', page: 'Page 12', snippet: 'Singapore revenue increased from $4.2M to $5.1M in Q4 period...' },
-        { name: 'rag_survey.pdf', page: 'Page 4', snippet: 'Optimization of logistics using vector search reduced overhead by 8%...' }
-      ]
+    async function createNewChat() {
+        loading = true;
+        const res = await fetch('/api/v1/chat/sessions', { method: 'POST' });
+        if (res.ok) {
+            const session = await res.json();
+            goto(`/chat/${session.id}`);
+        }
+        loading = false;
     }
-  ];
 </script>
 
-<div class="flex-1 flex flex-col h-full overflow-hidden">
-  <!-- Mobile History Toggle -->
-  {#if !chatHistory.isOpen()}
-    <div class="lg:hidden px-8 pt-4">
-      <button 
-        class="text-[10px] font-bold text-signal-blue uppercase tracking-widest flex items-center gap-2"
-        onclick={() => chatHistory.toggle()}
-      >
-        <ChevronRight size={14} class="rotate-180" />
-        View History
-      </button>
+<div class="flex-1 flex flex-col items-center justify-center p-8 space-y-6">
+    <div class="w-16 h-16 rounded-sm bg-muted border border-border flex items-center justify-center">
+        <PlusCircle size={32} class="text-signal-blue" />
     </div>
-  {:else}
-    <div class="lg:hidden h-14"></div> <!-- Spacer when history is open -->
-  {/if}
-
-  <!-- Messages Area -->
-  <div class="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
-    {#each messages as msg}
-      <div class="flex gap-6 max-w-4xl mx-auto {msg.role === 'user' ? 'opacity-90' : ''}">
-        <div class="w-10 h-10 rounded-sm shrink-0 flex items-center justify-center border
-          {msg.role === 'user' ? 'bg-muted border-border' : 'bg-signal-blue border-signal-blue/20'}"
-        >
-          {#if msg.role === 'user'}
-            <span class="text-[10px] font-bold text-muted-foreground uppercase">ID</span>
-          {:else}
-            <Bot size={20} class="text-white" />
-          {/if}
-        </div>
-        
-        <div class="space-y-6 flex-1 pt-2">
-          <div class="text-sm text-foreground leading-relaxed selection:bg-signal-blue/30">
-            {msg.content}
-          </div>
-
-          {#if msg.evidence}
-            <div class="space-y-3">
-              <h4 class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                <ChevronRight size={10} />
-                Supporting Intelligence
-              </h4>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {#each msg.evidence as doc}
-                  <button class="text-left p-3 border border-border rounded-sm bg-muted/30 hover:border-signal-blue hover:bg-muted/50 transition-all group">
-                    <div class="flex items-center gap-2 mb-2">
-                      <FileText size={14} class="text-muted-foreground group-hover:text-signal-blue" />
-                      <span class="text-[10px] text-foreground font-mono font-bold truncate">{doc.name} ({doc.page})</span>
-                    </div>
-                    <p class="text-[10px] text-muted-foreground italic line-clamp-2 leading-tight">
-                      "...{doc.snippet}"
-                    </p>
-                  </button>
-                {/each}
-              </div>
-            </div>
-          {/if}
-        </div>
-      </div>
-    {/each}
-  </div>
-
-  <!-- Input Area -->
-  <div class="p-8 border-t border-border bg-background/80 backdrop-blur-md">
-    <div class="max-w-4xl mx-auto relative group">
-      <textarea 
-        bind:value={query}
-        rows="1" 
-        placeholder="Query the Intelligence Vault..." 
-        class="w-full bg-muted/40 border border-border rounded-sm p-4 pr-14 text-sm text-foreground outline-none focus:border-signal-blue focus:bg-muted/60 transition-all font-mono uppercase tracking-wider resize-none"
-      ></textarea>
-      <button 
-        class="absolute right-3 bottom-3 p-2 bg-signal-blue text-white rounded-sm hover:bg-blue-500 transition-colors shadow-lg shadow-blue-900/20"
-        disabled={!query.trim()}
-      >
-        <Send size={18} />
-      </button>
+    
+    <div class="text-center space-y-2">
+        <h2 class="text-lg font-bold uppercase tracking-widest text-foreground">Intelligence Terminal</h2>
+        <p class="text-xs text-muted-foreground font-mono uppercase">Select a research session from history or start a new inquiry.</p>
     </div>
-    <div class="mt-2 text-center">
-      <p class="text-[9px] text-muted-foreground uppercase tracking-[0.2em]">hRAG Core: Intelligence Layer Active</p>
-    </div>
-  </div>
+
+    <button 
+        onclick={createNewChat}
+        disabled={loading}
+        class="flex items-center gap-2 px-6 py-3 bg-signal-blue text-white rounded-sm text-xs font-bold uppercase tracking-widest hover:bg-blue-500 transition-colors shadow-xl shadow-blue-900/30 disabled:opacity-50"
+    >
+        {#if loading}
+            <Loader2 size={16} class="animate-spin" />
+            Initializing Core...
+        {:else}
+            <PlusCircle size={16} />
+            Start New Research
+        {/if}
+    </button>
 </div>
-
-<style>
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: var(--color-border);
-    border-radius: 2px;
-  }
-</style>

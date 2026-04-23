@@ -11,6 +11,7 @@ import * as fs from 'node:fs/promises';
 export interface IngestionJob {
     id: string;
     docId: string;
+    name: string; // NEW: Include document name for vector metadata
     s3Key: string;
     mimeType: string;
     ownerId: string;
@@ -198,6 +199,7 @@ class IngestionQueueManager {
                 ownerId: job.ownerId,
                 accessIds, // Hard-Filtering Metadata (GEMINI.md mandate)
                 metadata: {
+                    name: job.name, // NEW: Include document name for search citations
                     chunkIndex: i,
                     extractionMethod: method,
                     originalS3Key: job.s3Key

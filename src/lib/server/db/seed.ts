@@ -81,7 +81,33 @@ async function seedEssential() {
         }
     }
 
-    // 4. Seed Default System Settings
+    // 4. Seed Canonical Taxonomy Tags
+    const canonicalTags = [
+        { name: 'FINANCE', color: 'text-signal-blue' },
+        { name: 'LEGAL', color: 'text-signal-orange' },
+        { name: 'TECH', color: 'text-signal-green' },
+        { name: 'HR', color: 'text-muted-foreground' },
+        { name: 'OPERATIONS', color: 'text-signal-blue' },
+        { name: 'SECURITY', color: 'text-signal-red' },
+        { name: 'COMPLIANCE', color: 'text-signal-orange' }
+    ];
+
+    for (const t of canonicalTags) {
+        const existing = await db.query.tags.findFirst({
+            where: eq(schema.tags.name, t.name)
+        });
+        if (!existing) {
+            await db.insert(schema.tags).values({
+                id: crypto.randomUUID(),
+                name: t.name,
+                color: t.color,
+                isAiGenerated: false
+            });
+            console.log(`[+] Canonical Tag created: ${t.name}`);
+        }
+    }
+
+    // 5. Seed Default System Settings
     const defaultSettings = [
         { key: 'system.version', value: '0.0.1' },
         { key: 'system.maintenance_mode', value: false },
@@ -183,12 +209,12 @@ async function seedDemo() {
 
     // 3. Seed some quarantined documents
     const quarantinedDocs = [
-        { name: 'Financial_Projections_2026.pdf', s3Key: 'demo/fin_2026.pdf', ownerId: admin.id, classification: 'RESTRICTED', reviewStatus: 'PENDING' as const },
-        { name: 'Network_Topology_Internal.png', s3Key: 'demo/net_top.png', ownerId: admin.id, classification: 'CONFIDENTIAL', reviewStatus: 'PENDING' as const }
+        { name: 'Financial_Projections_2026.pdf', s3Key: 'demo/fin_2026.pdf', ownerId: admin.id, classification: 'RESTRICTED', reviewStatus: 'PENDING' as const, tags: ['FINANCE', 'COMPLIANCE'] },
+        { name: 'Network_Topology_Internal.png', s3Key: 'demo/net_top.png', ownerId: admin.id, classification: 'CONFIDENTIAL', reviewStatus: 'PENDING' as const, tags: ['SECURITY', 'TECH'] }
     ];
 
     for (const d of quarantinedDocs) {
-        await db.insert(schema.documents).values({
+        const [doc] = await db.insert(schema.documents).values({
             id: crypto.randomUUID(),
             name: d.name,
             s3Key: d.s3Key,
@@ -198,7 +224,19 @@ async function seedDemo() {
             ingestionStatus: 'done',
             createdAt: new Date(),
             updatedAt: new Date()
-        }).onConflictDoNothing();
+        }).onConflictDoNothing().returning();
+
+        if (doc) {
+            for (const tagName of d.tags) {
+                const tag = await db.query.tags.findFirst({ where: eq(schema.tags.name, tagName) });
+                if (tag) {
+                    await db.insert(schema.documentsToTags).values({
+                        documentId: doc.id,
+                        tagId: tag.id
+                    }).onConflictDoNothing();
+                }
+            }
+        }
     }
 
     console.log('[+] Demo seeding complete.');

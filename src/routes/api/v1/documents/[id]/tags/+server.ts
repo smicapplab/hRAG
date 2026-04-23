@@ -58,6 +58,15 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
         });
 
         if (!tagRecord) {
+            // GOVERNANCE: Only Admins or Managers can create new canonical tags
+            const isPrivileged = locals.user.isAdmin || (doc.groupId && locals.user.groupRoles[doc.groupId] === 'MANAGER');
+            
+            if (!isPrivileged) {
+                return json({ 
+                    error: 'Taxonomy Governance: Only Admins or Managers can create new taxonomy labels. Please select from existing tags.' 
+                }, { status: 403 });
+            }
+
             [tagRecord] = await db.insert(schema.tags).values({
                 id: crypto.randomUUID(),
                 name: normalizedTagName,

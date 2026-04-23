@@ -96,8 +96,10 @@
 		<!-- Left: Tag Table -->
 		<div class="lg:col-span-8 flex flex-col space-y-4 overflow-hidden">
 			<div class="relative">
+				<label for="taxonomy-search" class="sr-only text-[9px]">Search Taxonomy</label>
 				<Search class="absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground" size={14} />
 				<input 
+					id="taxonomy-search"
 					type="text" 
 					bind:value={searchQuery}
 					placeholder="SEARCH TAXONOMY..."
@@ -178,8 +180,9 @@
 
 				<div class="space-y-4">
 					<div class="space-y-2">
-						<label class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Source Tag (Redundant)</label>
+						<label for="source-tag" class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Source Tag (Redundant)</label>
 						<select 
+							id="source-tag"
 							bind:value={selectedSourceId}
 							class="w-full h-10 bg-muted/40 border border-border rounded-sm px-3 text-[11px] font-mono uppercase outline-none focus:border-signal-red transition-colors"
 						>
@@ -195,8 +198,9 @@
 					</div>
 
 					<div class="space-y-2">
-						<label class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Target Tag (Canonical)</label>
+						<label for="target-tag" class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Target Tag (Canonical)</label>
 						<select 
+							id="target-tag"
 							bind:value={selectedTargetId}
 							class="w-full h-10 bg-muted/40 border border-border rounded-sm px-3 text-[11px] font-mono uppercase outline-none focus:border-signal-green transition-colors"
 						>

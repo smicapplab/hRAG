@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text, primaryKey } from 'drizzle-orm/sqlite-core';
+import { integer, sqliteTable, text, primaryKey, unique } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 
 // --- Organizational Structure ---
@@ -80,7 +80,9 @@ export const documentPermissions = sqliteTable('document_permissions', {
 	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
 	permission: text('permission', { enum: ['VIEW', 'EDIT'] }).notNull().default('VIEW'),
 	createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date())
-});
+}, (t) => ({
+	unq: unique().on(t.documentId, t.userId)
+}));
 
 // --- Auditing (SOC2/GDPR) ---
 

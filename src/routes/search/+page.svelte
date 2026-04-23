@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { Download, Search, Filter, Database, Tag, ChevronRight, X } from 'lucide-svelte';
+	import { goto } from '$app/navigation';
 
 	let { data }: { data: PageData } = $props();
 
@@ -8,10 +9,25 @@
 	let isSearching = $state(false);
 	let results = $state<any[]>([]);
 	let selectedTags = $state<string[]>([]);
+	let selectedClassification = $state<string>('');
+	let offset = $state(0);
+	const limit = 20;
 
-	async function handleSearch(e?: KeyboardEvent) {
-		if (e && e.key !== 'Enter') return;
-		if (!query.trim() && selectedTags.length === 0) return;
+	// Remove the $effect that calls handleSearch on tag change to avoid redundancy
+	// We will call handleSearch explicitly when filters change
+
+	async function handleSearch(e?: KeyboardEvent | { resetOffset?: boolean }) {
+		if (e && 'key' in e && e.key !== 'Enter') return;
+		
+		const shouldResetOffset = (e && 'resetOffset' in e && e.resetOffset) || (e && 'key' in e);
+		if (shouldResetOffset) {
+			offset = 0;
+		}
+
+		if (!query.trim() && selectedTags.length === 0 && !selectedClassification) {
+			results = [];
+			return;
+		}
 
 		isSearching = true;
 		try {
@@ -21,7 +37,9 @@
 				body: JSON.stringify({ 
 					query, 
 					tags: selectedTags,
-					limit: 20 
+					classification: selectedClassification || undefined,
+					limit,
+					offset
 				})
 			});
 			if (response.ok) {
@@ -41,6 +59,23 @@
 		} else {
 			selectedTags = [...selectedTags, tagName];
 		}
+		handleSearch({ resetOffset: true });
+	}
+
+	function changeClassification(cls: string) {
+		selectedClassification = selectedClassification === cls ? '' : cls;
+		handleSearch({ resetOffset: true });
+	}
+
+	function nextPage() {
+		if (results.length < limit) return;
+		offset += limit;
+		handleSearch();
+	}
+
+	function prevPage() {
+		if (offset === 0) return;
+		offset = Math.max(0, offset - limit);
 		handleSearch();
 	}
 
@@ -87,6 +122,26 @@
 			</div>
 
 			<div>
+				<h4 class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-4">Clearance Level</h4>
+				<div class="space-y-2">
+					{#each ['PUBLIC', 'INTERNAL', 'CONFIDENTIAL', 'RESTRICTED'] as cls}
+						<button 
+							onclick={() => changeClassification(cls)}
+							class="w-full flex items-center justify-between p-2 border rounded-sm transition-all
+							{selectedClassification === cls 
+								? 'bg-signal-blue/10 border-signal-blue text-signal-blue' 
+								: 'bg-muted/30 border-border text-muted-foreground hover:border-signal-blue/30 hover:text-foreground'}"
+						>
+							<span class="text-[9px] font-mono uppercase">{cls}</span>
+							{#if selectedClassification === cls}
+								<div class="w-1.5 h-1.5 rounded-full bg-signal-blue animate-pulse"></div>
+							{/if}
+						</button>
+					{/each}
+				</div>
+			</div>
+
+			<div>
 				<h4 class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-4">Search Logic</h4>
 				<div class="space-y-2">
 					<div class="flex items-center justify-between p-2 bg-muted/30 border border-border rounded-sm">
@@ -121,9 +176,9 @@
 				</p>
 			</div>
 			<div class="flex gap-2">
-				{#if selectedTags.length > 0}
+				{#if selectedTags.length > 0 || selectedClassification}
 					<button 
-						onclick={() => { selectedTags = []; handleSearch(); }}
+						onclick={() => { selectedTags = []; selectedClassification = ''; handleSearch({ resetOffset: true }); }}
 						class="flex items-center gap-2 rounded-sm border border-signal-red/20 bg-signal-red/10 px-3 py-1.5 text-[10px] font-bold tracking-widest text-signal-red uppercase transition-colors hover:bg-signal-red hover:text-white"
 					>
 						<X size={12} />
@@ -150,18 +205,27 @@
 				class="w-full rounded-sm border border-border bg-muted/30 p-4 pl-12 font-mono text-sm tracking-wider text-foreground uppercase transition-colors outline-none focus:border-signal-blue focus:bg-muted/50"
 				disabled={isSearching}
 			/>
-			{#if selectedTags.length > 0}
+			{#if selectedTags.length > 0 || selectedClassification}
 				<div class="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
 					<span class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Active Filters:</span>
-					<div class="flex -space-x-1">
-						{#each selectedTags.slice(0, 3) as tag}
-							<div class="w-4 h-4 rounded-full bg-signal-blue border border-background flex items-center justify-center text-[8px] text-white font-bold" title={tag}>
-								{tag[0]}
+					<div class="flex items-center gap-2">
+						{#if selectedClassification}
+							<div class="px-1.5 py-0.5 rounded-sm bg-signal-blue/20 border border-signal-blue/30 text-[8px] text-signal-blue font-bold uppercase">
+								{selectedClassification}
 							</div>
-						{/each}
-						{#if selectedTags.length > 3}
-							<div class="w-4 h-4 rounded-full bg-muted border border-background flex items-center justify-center text-[8px] text-muted-foreground font-bold">
-								+{selectedTags.length - 3}
+						{/if}
+						{#if selectedTags.length > 0}
+							<div class="flex -space-x-1">
+								{#each selectedTags.slice(0, 3) as tag}
+									<div class="w-4 h-4 rounded-full bg-signal-blue border border-background flex items-center justify-center text-[8px] text-white font-bold" title={tag}>
+										{tag[0]}
+									</div>
+								{/each}
+								{#if selectedTags.length > 3}
+									<div class="w-4 h-4 rounded-full bg-muted border border-background flex items-center justify-center text-[8px] text-muted-foreground font-bold">
+										+{selectedTags.length - 3}
+									</div>
+								{/if}
 							</div>
 						{/if}
 					</div>
@@ -189,7 +253,10 @@
 					</thead>
 					<tbody class="divide-y divide-border font-mono">
 						{#each results as result}
-							<tr class="group transition-colors hover:bg-signal-blue/5">
+							<tr 
+								onclick={() => goto(`/documents/${result.docId}`)}
+								class="group transition-colors hover:bg-signal-blue/5 cursor-pointer"
+							>
 								<td class="max-w-md p-4">
 									<div class="flex flex-col">
 										<div class="flex items-center gap-2 mb-2">
@@ -229,7 +296,7 @@
 								</td>
 								<td class="p-4 text-right">
 									<button
-										onclick={() => (window.location.href = `/api/v1/documents/${result.docId}/download`)}
+										onclick={(e) => { e.stopPropagation(); window.location.href = `/api/v1/documents/${result.docId}/download`; }}
 										class="text-muted-foreground transition-colors hover:text-signal-blue"
 										title="SECURE DOWNLOAD (60S TTL)"
 									>
@@ -265,15 +332,19 @@
 			<!-- Empty State / Footer -->
 			<div class="mt-auto flex items-center justify-between border-t border-border bg-muted/30 p-4">
 				<p class="text-[10px] tracking-widest text-muted-foreground uppercase">
-					Showing <span class="text-foreground">{results.length}</span> matching resources in cluster
+					Showing <span class="text-foreground">{results.length}</span> fragments (Offset: {offset})
 				</p>
 				<div class="flex gap-1">
 					<button
-						class="cursor-not-allowed rounded-sm border border-border bg-muted px-2 py-1 text-[10px] text-muted-foreground opacity-50 font-bold"
+						onclick={prevPage}
+						disabled={offset === 0}
+						class="rounded-sm border border-border bg-muted px-2 py-1 text-[10px] text-muted-foreground font-bold hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
 						>PREV</button
 					>
 					<button
-						class="rounded-sm border border-border bg-muted px-2 py-1 text-[10px] text-muted-foreground font-bold hover:text-foreground transition-colors"
+						onclick={nextPage}
+						disabled={results.length < limit}
+						class="rounded-sm border border-border bg-muted px-2 py-1 text-[10px] text-muted-foreground font-bold hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
 						>NEXT</button
 					>
 				</div>

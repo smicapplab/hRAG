@@ -60,34 +60,25 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             }
         }
 
-        // 2. Stateless Storage: S3 Upload
-        const bucket = 'hrag-raw';
-        await ensureBucket(bucket);
-
+        // 2. Metadata Persistence (Initial State)
         const s3Key = `documents/${crypto.randomUUID()}_${file.name}`;
         const buffer = Buffer.from(await file.arrayBuffer());
 
-        await s3.send(new PutObjectCommand({
-            Bucket: bucket,
-            Key: s3Key,
-            Body: buffer,
-            ContentType: file.type
-        }));
-
-        // 3. Metadata Persistence
         const [doc] = await db.insert(schema.documents).values({
             name: file.name,
             s3Key,
             ownerId: locals.user.id,
             groupId: groupId || null,
             classification,
+            ingestionStatus: 'pending' // Start as pending
         }).returning();
 
-        // 4. Temporary Local File for Ingestion Worker
+        // 3. Prepare for Background Processing
+        // Write to local temp file for immediate extraction availability
         const tmpPath = path.join(os.tmpdir(), `${doc.id}_${file.name}`);
         await fs.writeFile(tmpPath, buffer);
 
-        // 5. Enqueue Async Extraction/Embedding
+        // 4. Enqueue Async Upload & Ingestion
         // This process is backgrounded to not block the response
         ingestionQueue.addJob({
             id: crypto.randomUUID(),
@@ -97,19 +88,24 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             ownerId: locals.user.id,
             groupIds: groupId ? [groupId] : [],
             isPublic: classification === 'PUBLIC',
-            localFilePath: tmpPath
+            localFilePath: tmpPath,
+            uploadBuffer: buffer // Pass buffer for background S3 upload
         });
 
-        // 6. Audit Logging
+        // 5. Audit Logging
         await db.insert(schema.auditLogs).values({
             userId: locals.user.id,
-            event: 'DOCUMENT_UPLOAD',
+            event: 'DOCUMENT_UPLOAD_INITIATED',
             metadata: JSON.stringify({ docId: doc.id, fileName: file.name, classification })
         });
 
-        return json({ success: true, document: doc });
+        return json({ 
+            success: true, 
+            message: 'Document accepted for processing.',
+            document: doc 
+        });
     } catch (err: any) {
         console.error('[API] Error uploading document:', err);
-        return json({ error: 'Failed to process document upload' }, { status: 500 });
+        return json({ error: 'Failed to initiate document upload' }, { status: 500 });
     }
 };

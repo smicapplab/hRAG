@@ -17,14 +17,15 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
     try {
         const body = await request.json();
-        let { query, limit = 5, tags = [] } = body;
+        let { query, limit = 5, offset = 0, tags = [], classification } = body;
 
         if (!query || typeof query !== 'string') {
             return json({ error: 'Invalid query string' }, { status: 400 });
         }
 
-        // Spec: Validate and cap limit
+        // Spec: Validate and cap limit/offset
         limit = Math.min(Math.max(1, limit), 50);
+        offset = Math.max(0, offset);
 
         // 2. Generate Embedding
         const queryVector = await generateQueryEmbedding(query);
@@ -50,7 +51,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         // VectorStore enforces Engine-Level unified ACL scoping
         const vectorStore = await getVectorStore();
         
-        const vectorResults = await vectorStore.similaritySearch(queryVector, limit, {
+        // Increase limit slightly for vector search to account for deduplication
+        const vectorResults = await vectorStore.similaritySearch(queryVector, limit * 2, {
             userId,
             groupIds: groupIds || [],
             authorizedDocIds: authorizedDocIds,
@@ -67,15 +69,18 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         // 4. Defense-in-Depth (Relational Post-Validation)
         // Ensure that the documents STILL exist and STILL match user permissions 
         // in the source-of-truth metadata database before releasing the fragments.
+        const authFilters = [
+            eq(schema.documents.ownerId, userId),
+            eq(schema.documents.classification, 'PUBLIC')
+        ];
+        if (groupIds.length > 0) authFilters.push(inArray(schema.documents.groupId, groupIds));
+        if (authorizedDocIds.length > 0) authFilters.push(inArray(schema.documents.id, authorizedDocIds));
+
         const validRelationalDocs = await db.query.documents.findMany({
             where: (doc, { and, or, inArray, eq }) => and(
                 inArray(doc.id, retrievedDocIds),
-                or(
-                    eq(doc.ownerId, userId),
-                    eq(doc.classification, 'PUBLIC'),
-                    groupIds.length > 0 ? inArray(doc.groupId, groupIds) : undefined,
-                    authorizedDocIds.length > 0 ? inArray(doc.id, authorizedDocIds) : undefined // Add this
-                )
+                or(...authFilters),
+                classification ? eq(doc.classification, classification) : undefined
             )
         });
 
@@ -96,15 +101,28 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             }
         }
 
-        const secureResults = await Promise.all([...bestByDoc.values()].map(async v => {
-            const docMeta = validRelDocsMap.get(v.docId)!;
-            
-            // FETCH TAGS FOR THIS DOCUMENT (Metadata delivery for discovery)
-            const docTags = await db.select({ name: schema.tags.name })
+        // Apply pagination (limit/offset) on the deduplicated results
+        const pagedResults = [...bestByDoc.values()].slice(offset, offset + limit);
+
+        // BATCH FETCH ALL TAGS for the results to avoid N+1 queries
+        const resultDocIds = pagedResults.map(r => r.docId);
+        const allTags = resultDocIds.length > 0 
+            ? await db.select({ docId: schema.documentsToTags.documentId, name: schema.tags.name })
                 .from(schema.documentsToTags)
                 .innerJoin(schema.tags, eq(schema.documentsToTags.tagId, schema.tags.id))
-                .where(eq(schema.documentsToTags.documentId, v.docId));
+                .where(inArray(schema.documentsToTags.documentId, resultDocIds))
+            : [];
 
+        const tagsByDocId = new Map<string, string[]>();
+        allTags.forEach(t => {
+            const list = tagsByDocId.get(t.docId) || [];
+            list.push(t.name);
+            tagsByDocId.set(t.docId, list);
+        });
+
+        const secureResults = pagedResults.map(v => {
+            const docMeta = validRelDocsMap.get(v.docId)!;
+            
             return {
                 id: v.id,
                 docId: v.docId,
@@ -114,10 +132,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                 ownerId: docMeta.ownerId,
                 text: v.text,
                 score: v._distance ?? 0,
-                tags: docTags.map(t => t.name),
+                tags: tagsByDocId.get(v.docId) || [],
                 metadata: v.metadata
             };
-        }));
+        });
 
         // Sort by score ascending (lower distance = higher relevance)
         secureResults.sort((a, b) => a.score - b.score);

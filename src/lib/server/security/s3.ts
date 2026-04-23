@@ -19,16 +19,23 @@ export const s3 = new S3Client({
     forcePathStyle: true // Mandatory for Garage/Minio
 });
 
+const verifiedBuckets = new Set<string>();
+
 /**
  * Ensures the specified bucket exists, creating it if necessary.
+ * Uses an in-memory cache to avoid redundant checks.
  */
 export async function ensureBucket(bucket: string) {
+    if (verifiedBuckets.has(bucket)) return;
+
     try {
         await s3.send(new HeadBucketCommand({ Bucket: bucket }));
+        verifiedBuckets.add(bucket);
     } catch (err: any) {
         if (err.name === 'NotFound' || err.$metadata?.httpStatusCode === 404) {
             console.log(`[-] S3: Bucket '${bucket}' not found. Provisioning...`);
             await s3.send(new CreateBucketCommand({ Bucket: bucket }));
+            verifiedBuckets.add(bucket);
             console.log(`[+] S3: Bucket '${bucket}' created successfully.`);
         } else {
             throw err;

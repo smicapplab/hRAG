@@ -7,6 +7,85 @@ import { DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { eq, and } from 'drizzle-orm';
 import { getVectorStore } from '$lib/server/vectors';
 
+import { ROLE_WEIGHT, type Role } from '$lib/server/auth/roles';
+
+export const GET: RequestHandler = async ({ params, locals }) => {
+    if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { id: docId } = params;
+    
+    try {
+        const doc = await db.query.documents.findFirst({
+            where: eq(schema.documents.id, docId),
+            with: {
+                permissions: {
+                    where: eq(schema.documentPermissions.userId, locals.user.id)
+                }
+            }
+        });
+
+        if (!doc) return json({ error: 'Not Found' }, { status: 404 });
+
+        // Basic read check
+        const isOwner = doc.ownerId === locals.user.id;
+        const inGroup = doc.groupId && locals.user.groupIds.includes(doc.groupId);
+        const hasDirectPerm = doc.permissions.length > 0;
+        const isPublic = doc.classification === 'PUBLIC';
+
+        if (!isOwner && !inGroup && !hasDirectPerm && !isPublic && !locals.user.isAdmin) {
+            return json({ error: 'Forbidden' }, { status: 403 });
+        }
+
+        return json({ document: doc });
+    } catch (err) {
+        return json({ error: 'Internal Error' }, { status: 500 });
+    }
+};
+
+export const PATCH: RequestHandler = async ({ params, request, locals }) => {
+    if (!locals.user) return json({ error: 'Unauthorized' }, { status: 401 });
+    const { id: docId } = params;
+    const { classification, groupId } = await request.json();
+
+    try {
+        const doc = await db.query.documents.findFirst({
+            where: eq(schema.documents.id, docId)
+        });
+
+        if (!doc) return json({ error: 'Not Found' }, { status: 404 });
+
+        // Check update permission (Owner, Admin, or Group Manager)
+        const isOwner = doc.ownerId === locals.user.id;
+        let canUpdate = isOwner || locals.user.isAdmin;
+        
+        if (!canUpdate && doc.groupId) {
+            const role = locals.user.groupRoles[doc.groupId] as Role;
+            if (role && ROLE_WEIGHT[role] >= ROLE_WEIGHT.MANAGER) {
+                canUpdate = true;
+            }
+        }
+
+        if (!canUpdate) return json({ error: 'Forbidden' }, { status: 403 });
+
+        const updates: any = {};
+        if (classification) updates.classification = classification;
+        if (groupId !== undefined) updates.groupId = groupId;
+
+        await db.update(schema.documents).set(updates).where(eq(schema.documents.id, docId));
+
+        // Audit update
+        await db.insert(schema.auditLogs).values({
+            userId: locals.user.id,
+            event: 'DOCUMENT_METADATA_UPDATED',
+            metadata: JSON.stringify({ docId, updates })
+        });
+
+        return json({ success: true });
+    } catch (err) {
+        return json({ error: 'Update Failed' }, { status: 500 });
+    }
+};
+
 export const DELETE: RequestHandler = async ({ params, locals }) => {
     // 1. Authenticate Request
     if (!locals.user) {
@@ -17,16 +96,28 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
     const userId = locals.user.id;
 
     try {
-        // 2. Fetch document to verify ownership and get S3 key
+        // 2. Fetch document to verify access and get S3 key
         const doc = await db.query.documents.findFirst({
-            where: and(
-                eq(schema.documents.id, docId),
-                eq(schema.documents.ownerId, userId)
-            )
+            where: eq(schema.documents.id, docId)
         });
 
         if (!doc) {
-            return json({ error: 'Document not found or access denied' }, { status: 404 });
+            return json({ error: 'Document not found' }, { status: 404 });
+        }
+
+        // Verify Delete Permission (Owner, Admin, or Group Manager)
+        const isOwner = doc.ownerId === userId;
+        let canDelete = isOwner || locals.user.isAdmin;
+
+        if (!canDelete && doc.groupId) {
+            const role = locals.user.groupRoles[doc.groupId] as Role;
+            if (role && ROLE_WEIGHT[role] >= ROLE_WEIGHT.MANAGER) {
+                canDelete = true;
+            }
+        }
+
+        if (!canDelete) {
+            return json({ error: 'Forbidden: You do not have permission to purge this fragment.' }, { status: 403 });
         }
 
         // 3. Delete from S3 (Raw file)
@@ -51,10 +142,7 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 
         // 5. Delete from Relational Database (SQLite)
         await db.delete(schema.documents)
-            .where(and(
-                eq(schema.documents.id, docId),
-                eq(schema.documents.ownerId, userId)
-            ));
+            .where(eq(schema.documents.id, docId));
 
         // 6. Audit Logging
         await db.insert(schema.auditLogs).values({

@@ -134,4 +134,28 @@ export class PgVectorStore implements VectorStore {
             await callback(mapped);
         }
     }
+
+    async fetchFragments(docId: string, limit = 50, offset = 0): Promise<{ fragments: VectorDocument[], total: number }> {
+        if (!this.pool) await this.initialize();
+
+        const countRes = await this.pool.query(`SELECT count(*) FROM ${this.tableName} WHERE doc_id = $1`, [docId]);
+        const total = Number(countRes.rows[0]?.count || 0);
+
+        const { rows } = await this.pool.query(
+            `SELECT * FROM ${this.tableName} WHERE doc_id = $1 LIMIT $2 OFFSET $3`,
+            [docId, limit, offset]
+        );
+
+        const fragments = rows.map((row: any) => ({
+            id: row.id,
+            docId: row.doc_id,
+            text: row.text,
+            vector: row.vector ? row.vector.slice(1, -1).split(',').map(Number) : [],
+            ownerId: row.owner_id,
+            accessIds: row.access_ids,
+            metadata: row.metadata
+        }));
+
+        return { fragments, total };
+    }
 }

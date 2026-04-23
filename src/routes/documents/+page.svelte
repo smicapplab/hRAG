@@ -9,6 +9,18 @@
 	let isUploading = $state(false);
 	let fileInput: HTMLInputElement;
 	let pollInterval: ReturnType<typeof setInterval> | null = null;
+	
+	let searchQuery = $state('');
+	$effect(() => {
+		searchQuery = data.search || '';
+	});
+
+	let selectedGroupId = $state('');
+	let selectedClassification = $state('INTERNAL');
+	
+	let sharingDoc = $state<{id: string, name: string} | null>(null);
+	let shareEmail = $state('');
+	let sharePermission = $state('VIEW');
 
 	let pagination = $derived(data.pagination);
 
@@ -42,6 +54,17 @@
 		startPollingIfNeeded();
 	});
 
+	async function handleSearch() {
+		const url = new URL(window.location.href);
+		if (searchQuery) {
+			url.searchParams.set('q', searchQuery);
+		} else {
+			url.searchParams.delete('q');
+		}
+		url.searchParams.set('page', '1');
+		goto(url.toString(), { keepFocus: true });
+	}
+
 	async function handleFileUpload(event: Event) {
 		const target = event.target as HTMLInputElement;
 		const file = target.files?.[0];
@@ -51,7 +74,8 @@
 
 		const formData = new FormData();
 		formData.append('file', file);
-		formData.append('classification', 'INTERNAL');
+		formData.append('classification', selectedClassification);
+		if (selectedGroupId) formData.append('groupId', selectedGroupId);
 
 		try {
 			const response = await fetch('/api/v1/documents', {
@@ -74,6 +98,27 @@
 		} finally {
 			isUploading = false;
 			if (fileInput) fileInput.value = '';
+		}
+	}
+
+	async function handleShare() {
+		if (!sharingDoc || !shareEmail) return;
+		try {
+			const response = await fetch(`/api/v1/documents/${sharingDoc.id}/share`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ email: shareEmail, permission: sharePermission })
+			});
+			if (response.ok) {
+				alert(`Access granted to ${shareEmail}`);
+				sharingDoc = null;
+				shareEmail = '';
+			} else {
+				const err = await response.json();
+				alert(`Sharing failed: ${err.error}`);
+			}
+		} catch (err) {
+			console.error(err);
 		}
 	}
 
@@ -132,30 +177,66 @@
 		</div>
 
 		<div class="flex items-center gap-3">
-			<div class="group relative hidden sm:block">
-				<Search size={14} class="absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground" />
-				<input
-					type="text"
-					placeholder="FILTER FRAGMENTS..."
-					class="h-9 w-64 rounded-sm border border-border bg-muted pr-4 pl-9 font-mono text-xs uppercase transition-colors outline-none group-hover:bg-muted/80 focus:border-signal-blue"
-				/>
+			<div class="group relative hidden sm:flex items-center gap-2">
+				<div class="relative">
+					<label for="doc-search" class="sr-only">Search Fragments</label>
+					<Search size={14} class="absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground" />
+					<input
+						id="doc-search"
+						type="text"
+						bind:value={searchQuery}
+						onkeydown={(e) => e.key === 'Enter' && handleSearch()}
+						placeholder="FILTER FRAGMENTS..."
+						class="h-9 w-64 rounded-sm border border-border bg-muted pr-4 pl-9 font-mono text-xs uppercase transition-colors outline-none group-hover:bg-muted/80 focus:border-signal-blue"
+					/>
+				</div>
+				<button 
+					onclick={handleSearch}
+					class="h-9 px-3 border border-border bg-muted hover:bg-muted/80 text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-colors"
+				>
+					Apply
+				</button>
 			</div>
 
-			<button
-				onclick={() => fileInput?.click()}
-				class="flex h-9 items-center gap-2 rounded-sm bg-signal-blue px-4 text-xs font-bold tracking-widest text-white uppercase transition-colors hover:bg-blue-600 disabled:opacity-50"
-				disabled={isUploading}
-			>
-				{#if isUploading}
-					<div
-						class="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent"
-					></div>
-					UPLOADING...
-				{:else}
-					<Upload size={14} />
-					UPLOAD
-				{/if}
-			</button>
+			<div class="flex items-center gap-2 border-l border-border pl-3 ml-1">
+				<select 
+					aria-label="Upload to Group"
+					bind:value={selectedGroupId}
+					class="h-9 bg-muted border border-border rounded-sm text-[10px] font-mono uppercase px-2 outline-none focus:border-signal-blue"
+				>
+					<option value="">PRIVATE/PERSONAL</option>
+					{#each data.userGroups as g}
+						<option value={g.id}>{g.name}</option>
+					{/each}
+				</select>
+				
+				<select 
+					aria-label="Document Classification"
+					bind:value={selectedClassification}
+					class="h-9 bg-muted border border-border rounded-sm text-[10px] font-mono uppercase px-2 outline-none focus:border-signal-blue"
+				>
+					<option value="PUBLIC">PUBLIC</option>
+					<option value="INTERNAL">INTERNAL</option>
+					<option value="CONFIDENTIAL">CONFIDENTIAL</option>
+					<option value="RESTRICTED">RESTRICTED</option>
+				</select>
+
+				<button
+					onclick={() => fileInput?.click()}
+					class="flex h-9 items-center gap-2 rounded-sm bg-signal-blue px-4 text-xs font-bold tracking-widest text-white uppercase transition-colors hover:bg-blue-600 disabled:opacity-50"
+					disabled={isUploading}
+				>
+					{#if isUploading}
+						<div
+							class="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent"
+						></div>
+						UPLOADING...
+					{:else}
+						<Upload size={14} />
+						UPLOAD
+					{/if}
+				</button>
+			</div>
 			<input type="file" bind:this={fileInput} class="hidden" onchange={handleFileUpload} />
 		</div>
 	</div>
@@ -265,6 +346,7 @@
 							<Download size={14} />
 						</button>
 						<button
+							onclick={() => sharingDoc = { id: doc.id, name: doc.name }}
 							class="rounded-sm p-2 text-muted-foreground opacity-0 transition-colors group-hover:opacity-100 hover:bg-muted/80 hover:text-foreground"
 							title="SHARE DOCUMENT"
 						>
@@ -323,6 +405,69 @@
 		{/if}
 	</div>
 </div>
+
+{#if sharingDoc}
+	<div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+		<div class="w-full max-w-md border border-border bg-background p-6 shadow-2xl space-y-6">
+			<div>
+				<h3 class="text-sm font-bold text-foreground uppercase tracking-widest mb-1 flex items-center gap-2">
+					<Share2 size={16} class="text-signal-blue" />
+					Share Intelligence Fragment
+				</h3>
+				<p class="text-[10px] text-muted-foreground uppercase font-mono truncate">{sharingDoc.name}</p>
+			</div>
+
+			<div class="space-y-4 text-left">
+				<div class="space-y-2">
+					<label for="share-email" class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Recipient Identity (Email)</label>
+					<input 
+						id="share-email"
+						type="email" 
+						bind:value={shareEmail}
+						placeholder="user@hrag.local"
+						class="w-full h-10 bg-muted/30 border border-border rounded-sm px-4 text-xs outline-none focus:border-signal-blue font-mono"
+					/>
+				</div>
+
+				<div class="space-y-2">
+					<span class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Permission Scope</span>
+					<div class="grid grid-cols-2 gap-2">
+						<button 
+							onclick={() => sharePermission = 'VIEW'}
+							class="h-10 border text-[10px] font-bold uppercase tracking-widest rounded-sm transition-all
+							{sharePermission === 'VIEW' ? 'bg-signal-blue text-white border-signal-blue' : 'border-border text-muted-foreground hover:border-foreground'}"
+						>
+							View Only
+						</button>
+						<button 
+							onclick={() => sharePermission = 'EDIT'}
+							class="h-10 border text-[10px] font-bold uppercase tracking-widest rounded-sm transition-all
+							{sharePermission === 'EDIT' ? 'bg-signal-blue text-white border-signal-blue' : 'border-border text-muted-foreground hover:border-foreground'}"
+						>
+							Edit Access
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<div class="flex gap-3 pt-2">
+				<button 
+					onclick={() => sharingDoc = null}
+					class="flex-1 h-10 border border-border text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:bg-muted transition-colors rounded-sm"
+				>
+					Cancel
+				</button>
+				<button 
+					onclick={handleShare}
+					disabled={!shareEmail}
+					class="flex-1 h-10 bg-signal-blue text-white text-[10px] font-bold uppercase tracking-widest hover:bg-blue-600 disabled:opacity-50 transition-all rounded-sm"
+				>
+					Grant Access
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <style>
 	.custom-scrollbar::-webkit-scrollbar {

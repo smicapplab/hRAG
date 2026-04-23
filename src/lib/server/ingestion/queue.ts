@@ -16,8 +16,9 @@ export interface IngestionJob {
     ownerId: string;
     groupIds: string[];
     isPublic: boolean;
-    localFilePath: string; // The file temporarily downloaded from S3
+    localFilePath: string;
     userClassification?: string;
+    uploadBuffer?: Buffer; // NEW: Allow deferred S3 upload from memory
 }
 
 class IngestionQueueManager {
@@ -67,6 +68,39 @@ class IngestionQueueManager {
     }
 
     private async processJob(job: IngestionJob) {
+        // 0. Deferred S3 Upload (Stateless storage mandate)
+        if (job.uploadBuffer) {
+            const { s3, ensureBucket } = await import('../security/s3');
+            const { PutObjectCommand } = await import('@aws-sdk/client-s3');
+            
+            console.log(`[Ingestion] Deferring S3 upload for ${job.s3Key}...`);
+            const bucket = 'hrag-raw';
+            await ensureBucket(bucket);
+            
+            let attempts = 0;
+            const maxAttempts = 3;
+            while (attempts < maxAttempts) {
+                try {
+                    await s3.send(new PutObjectCommand({
+                        Bucket: bucket,
+                        Key: job.s3Key,
+                        Body: job.uploadBuffer,
+                        ContentType: job.mimeType
+                    }));
+                    console.log(`[Ingestion] S3 upload successful.`);
+                    break;
+                } catch (err: any) {
+                    attempts++;
+                    console.warn(`[Ingestion] S3 upload attempt ${attempts} failed: ${err.message}`);
+                    if (attempts >= maxAttempts) throw err;
+                    await new Promise(resolve => setTimeout(resolve, 1000 * attempts)); // Exponential-ish backoff
+                }
+            }
+            
+            // Clear buffer from memory as soon as possible
+            job.uploadBuffer = undefined;
+        }
+
         // 1. Extract Text
         console.log(`[Ingestion] Extracting text (${job.mimeType})...`);
         const { text, method } = await extractText(job.localFilePath, job.mimeType);

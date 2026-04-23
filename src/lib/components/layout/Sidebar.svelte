@@ -16,7 +16,7 @@
     onClose?: () => void;
   } = $props();
 
-  const navItems = [
+  const allNavItems = [
     {
       title: 'Intelligence',
       items: [
@@ -32,15 +32,25 @@
     },
     {
       title: 'Administration',
+      adminOnly: true,
       items: [
         { label: 'Users & Groups', icon: Users, href: '/admin/users' },
         { label: 'Taxonomy Registry', icon: Tag, href: '/admin/taxonomy' },
         { label: 'System Health', icon: Activity, href: '/admin/health' },
-        { label: 'Audit Vault', icon: Shield, href: '/admin/audit' },
+        { label: 'Audit Vault', icon: Shield, href: '/admin/audit', compliance: true },
         { label: 'Settings', icon: Settings, href: '/admin/settings' }
       ]
     }
   ];
+
+  const navItems = $derived(
+    allNavItems
+      .filter(section => !section.adminOnly || user.isAdmin)
+      .map(section => ({
+        ...section,
+        items: section.items.filter(item => !item.compliance || user.isCompliance || user.isAdmin)
+      }))
+  );
 
   function isActive(href: string) {
     return page.url.pathname.startsWith(href);

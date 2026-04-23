@@ -36,14 +36,9 @@ npm run db:migrate || echo "[i] Migration status check complete."
 echo "[-] Building application bundle..."
 npm run build
 
-# 4. Process Launch (with Replication)
-echo "[+] Launching Intelligence Node..."
+# 4. Process Launch (Managed by PM2)
+echo "[+] Launching Intelligence Node via PM2..."
 
-if command -v litestream >/dev/null 2>&1; then
-  # Wrap the node process in litestream replicate
-  echo "[-] Starting Node with real-time S3 replication..."
-  litestream replicate -exec "node build/index.js"
-else
-  echo "[!] WARNING: Starting without S3 replication (Litestream missing)."
-  node build/index.js
-fi
+# Use pm2-runtime for better signal handling (SIGINT/SIGTERM) and auto-restart
+# This replaces the manual litestream/node execution and fixes the 'cannot stop' issue.
+exec npx pm2-runtime start ecosystem.config.cjs

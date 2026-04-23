@@ -2,7 +2,7 @@ import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import * as schema from '$lib/server/db/schema';
-import { eq, and, or, inArray } from 'drizzle-orm';
+import { eq, or, and, inArray } from 'drizzle-orm';
 import { ROLE_WEIGHT, type Role } from '$lib/server/auth/roles';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
@@ -79,6 +79,29 @@ export const load: PageServerLoad = async ({ params, locals }) => {
         columns: { name: true }
     }) : null;
 
+    // 8. Fetch current shares
+    const currentPermissions = await db.query.documentPermissions.findMany({
+        where: eq(schema.documentPermissions.documentId, docId),
+        with: {
+            user: {
+                columns: { name: true, email: true }
+            }
+        }
+    });
+
+    // 9. Fetch user's groups for group sharing (Admins can see all groups)
+    let userGroups: any[] = [];
+    if (locals.user.isAdmin) {
+        userGroups = await db.query.groups.findMany({
+            columns: { id: true, name: true }
+        });
+    } else if (groupIds.length > 0) {
+        userGroups = await db.query.groups.findMany({
+            where: inArray(schema.groups.id, groupIds),
+            columns: { id: true, name: true }
+        });
+    }
+
     return {
         document: {
             ...doc,
@@ -87,6 +110,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
         },
         activeTags,
         suggestedTags: suggestedTags || [],
+        currentPermissions,
+        userGroups,
         canEdit,
         canCreateTag,
         isOwner

@@ -56,6 +56,12 @@ export interface VectorStore {
      * @param callback Function called for each chunk of documents.
      */
     scan(callback: (documents: VectorDocument[]) => Promise<void>): Promise<void>;
+
+    /**
+     * Fetch all fragments (chunks) for a specific document.
+     * Supports pagination for the reader view.
+     */
+    fetchFragments(docId: string, limit?: number, offset?: number): Promise<{ fragments: VectorDocument[], total: number }>;
 }
 
 let storeInstance: VectorStore | null = null;

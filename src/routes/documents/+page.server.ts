@@ -2,7 +2,7 @@ import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import * as schema from '$lib/server/db/schema';
-import { eq, or, and, inArray, exists, count } from 'drizzle-orm';
+import { eq, or, and, inArray, exists, count, ilike } from 'drizzle-orm';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
     if (!locals.user) {
@@ -11,13 +11,13 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
     const { id: userId, groupIds } = locals.user;
     const page = Number(url.searchParams.get('page')) || 1;
+    const search = url.searchParams.get('q') || '';
     const limit = 50;
     const offset = (page - 1) * limit;
 
     try {
         // Iron-Clad Privacy Scoping: 
-        // We use an 'exists' subquery for sharing to avoid the inArray limit (10k+ docs)
-        const filter = (doc: any, { eq, or, and, inArray, exists }: any) => or(
+        const accessFilter = (doc: any, { eq, or, and, inArray, exists }: any) => or(
             eq(doc.ownerId, userId),
             eq(doc.classification, 'PUBLIC'),
             groupIds.length > 0 ? inArray(doc.groupId, groupIds) : undefined,
@@ -31,16 +31,26 @@ export const load: PageServerLoad = async ({ locals, url }) => {
             )
         );
 
+        const searchFilter = search 
+            ? (doc: any, { ilike: _ilike }: any) => ilike(doc.name, `%${search}%`)
+            : undefined;
+
+        const combinedFilter = (doc: any, ops: any) => {
+            const acc = accessFilter(doc, ops);
+            const srch = searchFilter ? searchFilter(doc, ops) : undefined;
+            return srch ? and(acc, srch) : acc;
+        };
+
         // 1. Get total count for pagination
         const [totalCountResult] = await db.select({ value: count() })
             .from(schema.documents)
-            .where(filter(schema.documents, { eq, or, and, inArray, exists }));
+            .where(combinedFilter(schema.documents, { eq, or, and, inArray, exists, ilike }));
 
         const totalDocs = totalCountResult.value;
 
         // 2. Query paginated documents with relations
         const userDocs = await db.query.documents.findMany({
-            where: filter,
+            where: combinedFilter,
             limit,
             offset,
             with: {
@@ -56,6 +66,14 @@ export const load: PageServerLoad = async ({ locals, url }) => {
             orderBy: (docs, { desc }) => [desc(docs.createdAt)]
         });
 
+        // 3. Fetch full group details for the upload dropdown
+        const userGroups = groupIds.length > 0 
+            ? await db.query.groups.findMany({
+                where: inArray(schema.groups.id, groupIds),
+                columns: { id: true, name: true }
+              })
+            : [];
+
         return {
             documents: userDocs.map(doc => ({
                 ...doc,
@@ -63,6 +81,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
                 userPermission: doc.permissions?.[0]?.permission || (doc.ownerId === userId ? 'OWNER' : 'VIEW'),
                 tags: doc.tags.map(t => t.tag.name)
             })),
+            userGroups,
+            search,
             pagination: {
                 total: totalDocs,
                 page,

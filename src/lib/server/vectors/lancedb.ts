@@ -1,6 +1,10 @@
 import * as lancedb from '@lancedb/lancedb';
-import { env } from '$env/dynamic/private';
+import * as dotenv from 'dotenv';
 import type { VectorStore, VectorDocument, SecurityFilter } from './index';
+
+if (typeof process !== 'undefined') {
+    dotenv.config();
+}
 
 export class LanceDBStore implements VectorStore {
     private db: lancedb.Connection | null = null;
@@ -11,9 +15,9 @@ export class LanceDBStore implements VectorStore {
 
         // Initialize S3 connection for LanceDB if S3_ENDPOINT is present
         // Default to a local path if S3 environment variables are not found (e.g., local dev without Garage S3)
-        let uri = env.LANCEDB_URI;
+        let uri = process.env.LANCEDB_URI;
         if (!uri) {
-            if (env.S3_ENDPOINT) {
+            if (process.env.S3_ENDPOINT) {
                 // S3 URI format is s3://<bucket>/<path>
                 // We provide the endpoint in storageOptions
                 uri = `s3://hrag-vectors`;
@@ -23,13 +27,13 @@ export class LanceDBStore implements VectorStore {
         }
 
         const storageOptions: Record<string, string> = {};
-        if (env.S3_ENDPOINT) {
+        if (process.env.S3_ENDPOINT) {
             // Passing AWS credentials via storageOptions directly
-            storageOptions.awsEndpoint = env.S3_ENDPOINT;
-            storageOptions.awsAccessKeyId = env.S3_ACCESS_KEY || '';
-            storageOptions.awsSecretAccessKey = env.S3_SECRET_KEY || '';
-            storageOptions.awsRegion = env.S3_REGION || 'us-east-1'; // Default for Garage S3
-            storageOptions.awsAllowHttp = env.S3_ENDPOINT.startsWith('http://').toString();
+            storageOptions.awsEndpoint = process.env.S3_ENDPOINT;
+            storageOptions.awsAccessKeyId = process.env.S3_ACCESS_KEY || '';
+            storageOptions.awsSecretAccessKey = process.env.S3_SECRET_KEY || '';
+            storageOptions.awsRegion = process.env.S3_REGION || 'us-east-1'; // Default for Garage S3
+            storageOptions.awsAllowHttp = process.env.S3_ENDPOINT.startsWith('http://').toString();
             
             const { ensureBucket } = await import('../security/s3');
             await ensureBucket('hrag-vectors');
@@ -86,21 +90,22 @@ export class LanceDBStore implements VectorStore {
         const idList = docIds.map(id => `'${id}'`).join(', ');
         await table.delete(`docId IN (${idList})`);
     }
+async updateAccess(docId: string, accessIds: string[]): Promise<void> {
+    if (!this.db) await this.initialize();
+    const tableNames = await this.db!.tableNames();
+    if (!tableNames.includes(this.tableName)) return;
 
-    async updateAccess(docId: string, accessIds: string[]): Promise<void> {
-        if (!this.db) await this.initialize();
-        const tableNames = await this.db!.tableNames();
-        if (!tableNames.includes(this.tableName)) return;
+    const table = await this.db!.openTable(this.tableName);
 
-        const table = await this.db!.openTable(this.tableName);
-        
-        // Sanitize docId to prevent injection
-        const safeDocId = docId.replace(/'/g, "''");
-        // Pack accessIds with bounding commas for exact LIKE matching
-        const formattedAccessIds = `,${accessIds.join(',')},`;
-        
-        await table.update({ accessIds: formattedAccessIds }, { where: `docId = '${safeDocId}'` });
-    }
+    // Sanitize docId to prevent injection
+    const safeDocId = docId.replace(/'/g, "''");
+    // Pack accessIds with bounding commas for exact LIKE matching
+    // We MUST wrap the value in single quotes because LanceDB update values are SQL expressions.
+    const formattedAccessIds = `',${accessIds.join(',').replace(/'/g, "''")},'`;
+
+    await table.update({ accessIds: formattedAccessIds }, { where: `docId = '${safeDocId}'` });
+}
+
 
     async similaritySearch(
         queryVector: number[],
@@ -191,5 +196,43 @@ export class LanceDBStore implements VectorStore {
             }));
             await callback(mapped);
         }
+    }
+
+    async fetchFragments(docId: string, limit = 50, offset = 0): Promise<{ fragments: VectorDocument[], total: number }> {
+        if (!this.db) await this.initialize();
+        const tableNames = await this.db!.tableNames();
+        if (!tableNames.includes(this.tableName)) return { fragments: [], total: 0 };
+
+        const table = await this.db!.openTable(this.tableName);
+        
+        // Sanitize docId
+        const safeDocId = docId.replace(/'/g, "''");
+        
+        // 1. Get total count for this docId
+        const allResults = await table.query()
+            .where(`docId = '${safeDocId}'`)
+            .select(['id'])
+            .toArray();
+        
+        const total = allResults.length;
+
+        // 2. Fetch paginated fragments
+        const results = await table.query()
+            .where(`docId = '${safeDocId}'`)
+            .limit(limit)
+            .offset(offset)
+            .toArray();
+
+        const fragments = results.map(row => ({
+            id: row.id as string,
+            docId: row.docId as string,
+            text: row.text as string,
+            vector: row.vector as number[],
+            ownerId: row.ownerId as string,
+            accessIds: (row.accessIds as string).split(',').filter(Boolean),
+            metadata: JSON.parse((row.metadata as string) || '{}')
+        }));
+
+        return { fragments, total };
     }
 }

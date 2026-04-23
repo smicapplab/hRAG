@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { MessageSquare, Search, FileText, Users, Activity, Shield, Settings, Bot, LogOut } from 'lucide-svelte';
+  import { MessageSquare, Search, FileText, Users, Activity, Shield, Settings, Bot, LogOut, Tag } from 'lucide-svelte';
   import { page } from '$app/state';
 
   let { 
@@ -34,6 +34,7 @@
       title: 'Administration',
       items: [
         { label: 'Users & Groups', icon: Users, href: '/admin/users' },
+        { label: 'Taxonomy Registry', icon: Tag, href: '/admin/taxonomy' },
         { label: 'System Health', icon: Activity, href: '/admin/health' },
         { label: 'Audit Vault', icon: Shield, href: '/admin/audit' },
         { label: 'Settings', icon: Settings, href: '/admin/settings' }

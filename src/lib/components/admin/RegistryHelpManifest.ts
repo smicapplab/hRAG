@@ -96,6 +96,26 @@ export const HELP_DATA: Record<string, HelpGuide> = {
 		cons: ['Users cannot access documents'],
 		tip: 'Always enable this before running "hrag update" on a production cluster.',
 		cost: 'FREE'
+	},
+	'classification.auto_enabled': {
+		title: 'Auto-Classification Engine',
+		description: 'Enables real-time AI scanning of documents during ingestion to suggest security levels and discovery tags.',
+		pros: ['Automates tedious metadata entry', 'Detects sensitive data (SSN, CC) automatically'],
+		cons: ['Increases ingestion time', 'Requires LLM or CPU resources'],
+		tip: 'Keep this enabled to ensure "High-Water Mark" security compliance.',
+		cost: 'LOW'
+	},
+	'classification.tier': {
+		title: 'Classification AI Tier',
+		description: 'Selects the intelligence level used for scanning document content.',
+		pros: [
+			'LOCAL: Zero-cost, 100% private, regex-based.',
+			'OLLAMA: GPU-accelerated local intelligence.',
+			'CLOUD: Highest accuracy using OpenAI/Gemini.'
+		],
+		cons: ['Cloud tiers involve data transfer costs'],
+		tip: 'Use OLLAMA for the best balance of privacy and intelligence.',
+		cost: 'VARIABLE'
 	}
 };
 

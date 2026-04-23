@@ -1,6 +1,7 @@
 import { db } from '../db';
-import { classificationPolicies } from '../db/schema';
+import { classificationPolicies, tags as tagsTable } from '../db/schema';
 import { getSetting } from '../admin/registry';
+import { generateQueryEmbedding } from './embeddings';
 
 /**
  * hRAG Classification Engine
@@ -77,9 +78,7 @@ export async function suggestTags(text: string): Promise<string[]> {
     const isAutoEnabled = await getSetting('classification.auto_enabled', true);
     if (!isAutoEnabled) return [];
 
-    const tier = await getSetting('classification.tier', 'local');
-    
-    // For now, we use local keywords. Later, this will call Ollama/Cloud.
+    // 1. Keyword Extraction (Fast)
     const suggestions: string[] = [];
     
     const keywords = [
@@ -95,5 +94,31 @@ export async function suggestTags(text: string): Promise<string[]> {
         }
     }
 
-    return suggestions;
+    // 2. Semantic Vector Matching (Fallback/Refinement)
+    try {
+        const docVector = await generateQueryEmbedding(text.slice(0, 1000));
+        const allTags = await db.select().from(tagsTable);
+        
+        // We embed tag names on the fly. 
+        // Note: For large tag sets, we would pre-index these in a separate LanceDB table.
+        for (const tag of allTags) {
+            if (suggestions.includes(tag.name)) continue;
+            
+            const tagVector = await generateQueryEmbedding(tag.name);
+            
+            // Cosine Similarity
+            const dotProduct = docVector.reduce((acc, val, i) => acc + val * tagVector[i], 0);
+            const magA = Math.sqrt(docVector.reduce((acc, val) => acc + val * val, 0));
+            const magB = Math.sqrt(tagVector.reduce((acc, val) => acc + val * val, 0));
+            const similarity = dotProduct / (magA * magB);
+
+            if (similarity > 0.7) { 
+                suggestions.push(tag.name);
+            }
+        }
+    } catch (err) {
+        console.warn('[Classifier] Semantic tagging failed, falling back to keywords:', err);
+    }
+
+    return [...new Set(suggestions)];
 }

@@ -96,8 +96,15 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             }
         }
 
-        const secureResults = [...bestByDoc.values()].map(v => {
+        const secureResults = await Promise.all([...bestByDoc.values()].map(async v => {
             const docMeta = validRelDocsMap.get(v.docId)!;
+            
+            // FETCH TAGS FOR THIS DOCUMENT (Metadata delivery for discovery)
+            const docTags = await db.select({ name: schema.tags.name })
+                .from(schema.documentsToTags)
+                .innerJoin(schema.tags, eq(schema.documentsToTags.tagId, schema.tags.id))
+                .where(eq(schema.documentsToTags.documentId, v.docId));
+
             return {
                 id: v.id,
                 docId: v.docId,
@@ -107,10 +114,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
                 ownerId: docMeta.ownerId,
                 text: v.text,
                 score: v._distance ?? 0,
+                tags: docTags.map(t => t.name),
                 metadata: v.metadata
             };
+        }));
+
         // Sort by score ascending (lower distance = higher relevance)
-        }).sort((a, b) => a.score - b.score);
+        secureResults.sort((a, b) => a.score - b.score);
 
         // 6. Audit Logging
         // Log the search action asynchronously

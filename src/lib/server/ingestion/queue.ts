@@ -110,17 +110,29 @@ class IngestionQueueManager {
 
         // 3. Discovery Tagging
         console.log(`[Ingestion] Scanning for discovery tags...`);
-        const tags = await suggestTags(text.slice(0, 10000));
-        for (const tagName of tags) {
-            // Ensure tag exists
+        const suggestedTags = await suggestTags(text.slice(0, 10000));
+        for (const tagName of suggestedTags) {
+            // Ensure tag exists (Normalized to uppercase)
+            const normalizedName = tagName.trim().toUpperCase();
+            
             await db.insert(schema.tags)
-                .values({ id: crypto.randomUUID(), name: tagName, isAiGenerated: true })
+                .values({ 
+                    id: crypto.randomUUID(), 
+                    name: normalizedName, 
+                    isAiGenerated: true 
+                })
                 .onConflictDoNothing();
             
-            const tagRecord = await db.query.tags.findFirst({ where: eq(schema.tags.name, tagName) });
+            const tagRecord = await db.query.tags.findFirst({ 
+                where: eq(schema.tags.name, normalizedName) 
+            });
+            
             if (tagRecord) {
                 await db.insert(schema.documentsToTags)
-                    .values({ documentId: job.docId, tagId: tagRecord.id })
+                    .values({ 
+                        documentId: job.docId, 
+                        tagId: tagRecord.id 
+                    })
                     .onConflictDoNothing();
             }
         }

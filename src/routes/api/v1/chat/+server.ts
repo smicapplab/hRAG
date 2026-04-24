@@ -39,10 +39,22 @@ export const POST = async ({ request, locals }) => {
         });
         const history = recentMessages.reverse();
 
+        // Auto-Rename Session if it's the first message
+        if (recentMessages.length === 1 && session.title === 'New Intelligence Research') {
+            const shortTitle = query.slice(0, 30).trim() + (query.length > 30 ? '...' : '');
+            await db.update(schema.chatSessions)
+                .set({ title: shortTitle })
+                .where(eq(schema.chatSessions.id, sessionId));
+        }
+
         // 3. Vector Search (Strictly Document-Anchored)
         const queryVector = await generateQueryEmbedding(query);
         const vectorStore = await getVectorStore();
         
+        // Safety Check: Are there any documents at all?
+        const totalDocCount = await db.select({ value: sql`count(*)` }).from(schema.documents);
+        const hasDocuments = Number(totalDocCount[0]?.value) > 0;
+
         // Fetch shared document IDs for the user (Unified ACL check)
         const sharedDocs = await db.select({ id: schema.documentPermissions.documentId })
             .from(schema.documentPermissions)
@@ -55,43 +67,34 @@ export const POST = async ({ request, locals }) => {
             authorizedDocIds
         });
 
-        // Enrichment: Fetch document names if missing from metadata
-        const docIdsWithMissingNames = fragments
-            .filter(f => !f.metadata.name)
-            .map(f => f.docId);
-        
-        if (docIdsWithMissingNames.length > 0) {
-            const uniqueDocIds = [...new Set(docIdsWithMissingNames)];
-            const docs = await db.select({ id: schema.documents.id, name: schema.documents.name })
-                .from(schema.documents)
-                .where(inArray(schema.documents.id, uniqueDocIds));
-            const nameMap = Object.fromEntries(docs.map(d => [d.id, d.name]));
-            
-            fragments.forEach(f => {
-                if (!f.metadata.name) {
-                    f.metadata.name = nameMap[f.docId] || 'Unknown Document';
-                }
-            });
-        }
+        console.log(`[Chat] Query: "${query}" | Fragments found: ${fragments.length}`);
 
         // 4. Construct Prompt
-        const contextString = fragments.length > 0 
-            ? fragments.map(f => `[SOURCE: ${f.metadata.name}] CONTENT: ${f.text}`).join('\n\n')
-            : "NO AUTHORIZED FRAGMENTS FOUND.";
+        let contextString = "";
+        if (!hasDocuments) {
+            contextString = "SYSTEM NOTICE: THE INTELLIGENCE VAULT IS COMPLETELY EMPTY. NO DOCUMENTS HAVE BEEN UPLOADED OR INDEXED YET. ADVISE THE USER TO UPLOAD DOCUMENTS TO THE SYSTEM.";
+        } else if (fragments.length === 0) {
+            contextString = "NO AUTHORIZED FRAGMENTS FOUND. The user has access to some documents, but none are semantically relevant to this specific query.";
+        } else {
+            contextString = fragments.map(f => `[SOURCE: ${f.metadata.name}] (Score: ${f._distance?.toFixed(4) || 'N/A'}) CONTENT: ${f.text}`).join('\n\n');
+        }
 
-        const systemPrompt = `You are hRAG Intelligence, a strictly document-anchored analytical terminal.
-        
-        RULES:
-        1. ANSWER ONLY using the provided authorized fragments.
-        2. If the fragments do not contain the answer, perform a GAP ANALYSIS: State exactly what information is missing.
-        3. Never use external knowledge or your own training data to answer.
-        4. Every assertion MUST be cited like [Document Name].
-        
-        AUTHORIZED FRAGMENTS:
-        ${contextString}`;
+        const systemPrompt = `You are hRAG Intelligence, a sophisticated analytical assistant. Your goal is to synthesize data from the provided documents into clear, professional insights.
+
+OPERATIONAL PROTOCOLS:
+1. ANCHORING: Base your entire response ONLY on the authorized fragments provided below.
+2. SYNTHESIS: Use semantic reasoning. For example, if a document contains professional details about a person, use those details to answer questions about their "resume" or "background" even if those exact words are missing.
+3. CITATION: Every assertion must be followed by a citation like [Document Name].
+4. UNCERTAINTY: If the fragments truly do not contain information relevant to the query, clearly state what is missing and why you cannot answer. Avoid the phrase "GAP ANALYSIS" unless it's the most natural way to explain a missing data point.
+5. CONTEXT: Maintain a helpful, intelligent tone. Do not sound like a terminal or a script.
+
+AUTHORIZED FRAGMENTS:
+${contextString}`;
+
+        console.log(`[Chat] Prompt Context Length: ${contextString.length} chars`);
 
         // 5. Call LLM
-        const model = await getChatModel();
+        const { model, name: modelName } = await getChatModel();
         const response = await model.invoke([
             { role: 'system', content: systemPrompt },
             ...history.map(m => ({ role: m.role, content: m.content })),
@@ -100,7 +103,27 @@ export const POST = async ({ request, locals }) => {
 
         const assistantContent = response.content;
 
-        // 6. Persist Assistant Response
+        // 6. Auto-Rename Session if it's the first message
+        let newTitle: string | undefined;
+        if (recentMessages.length === 1 && (session.title === 'New Intelligence Research' || session.title === 'New Research')) {
+            try {
+                const titlePrompt = `Generate a concise, 3-5 word title for a research session that starts with this query: "${query}". Return ONLY the title, no quotes or punctuation.`;
+                const titleResponse = await model.invoke([
+                    { role: 'system', content: 'You are a professional research coordinator. You generate short, descriptive titles for inquiries.' },
+                    { role: 'user', content: titlePrompt }
+                ]);
+                newTitle = (titleResponse.content as string).trim();
+                if (newTitle) {
+                    await db.update(schema.chatSessions)
+                        .set({ title: newTitle })
+                        .where(eq(schema.chatSessions.id, sessionId));
+                }
+            } catch (err) {
+                console.warn('[Chat] Failed to auto-generate title:', err);
+            }
+        }
+
+        // 7. Persist Assistant Response
         await db.insert(schema.chatMessages).values({
             sessionId,
             role: 'assistant',
@@ -112,7 +135,7 @@ export const POST = async ({ request, locals }) => {
             })))
         });
 
-        // 7. Log Search Audit
+        // 8. Log Search Audit
         const queryHash = crypto.createHash('sha256').update(query).digest('hex');
         await db.insert(schema.auditLogs).values({
             userId: userId,
@@ -121,7 +144,9 @@ export const POST = async ({ request, locals }) => {
         });
 
         return json({ 
-            content: assistantContent, 
+            content: assistantContent,
+            newTitle,
+            modelName,
             evidence: fragments.map(f => ({ 
                 docId: f.docId, 
                 name: f.metadata.name, 
@@ -131,6 +156,6 @@ export const POST = async ({ request, locals }) => {
 
     } catch (err: any) {
         console.error('[API] Chat error:', err);
-        return json({ error: 'Intelligence gateway timeout or error' }, { status: 500 });
+        return json({ error: err.message || 'Intelligence gateway timeout or error' }, { status: 500 });
     }
 };

@@ -14,7 +14,11 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 /**
  * Fetches all settings from the database and updates the local cache.
  */
-async function refreshCache() {
+export async function refreshCache(force = false) {
+    if (!force && Date.now() - lastFetch < CACHE_TTL) {
+        return;
+    }
+
     try {
         const settings = await db.select().from(systemSettings);
         const newCache: Record<string, any> = {};
@@ -38,11 +42,16 @@ async function refreshCache() {
  * Retrieves a system setting by key.
  */
 export async function getSetting<T>(key: string, defaultValue: T): Promise<T> {
-    if (Date.now() - lastFetch > CACHE_TTL) {
-        await refreshCache();
-    }
-    
+    await refreshCache();
     return (settingsCache[key] as T) ?? defaultValue;
+}
+
+/**
+ * Retrieves all system settings.
+ */
+export async function getAllSettings(): Promise<Record<string, any>> {
+    await refreshCache();
+    return { ...settingsCache };
 }
 
 /**

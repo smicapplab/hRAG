@@ -59,17 +59,23 @@ export class LanceDBStore implements VectorStore {
         }
         
         // Flatten array fields for LanceDB SQL compatibility
-        const data = documents.map(doc => ({
-            id: doc.id,
-            docId: doc.docId,
-            text: doc.text,
-            vector: doc.vector,
-            ownerId: doc.ownerId,
-            // Pack accessIds with bounding commas for exact LIKE matching
-            // Standardized format: ,u:id,g:id,r:global,
-            accessIds: `,${doc.accessIds.join(',')},`, 
-            metadata: JSON.stringify(doc.metadata || {})
-        }));
+        const data = documents.map(doc => {
+            // Ensure single-comma boundaries and no empty tokens
+            const ids = doc.accessIds
+                .map(id => id.replace(/,/g, ''))
+                .filter(Boolean);
+            const accessIdsString = `,${ids.join(',')},`;
+
+            return {
+                id: doc.id,
+                docId: doc.docId,
+                text: doc.text,
+                vector: doc.vector,
+                ownerId: doc.ownerId,
+                accessIds: accessIdsString, 
+                metadata: JSON.stringify(doc.metadata || {})
+            };
+        });
 
         if (table) {
             await table.add(data);

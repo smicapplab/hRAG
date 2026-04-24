@@ -12,11 +12,7 @@ const { createClient } = await import(/* @vite-ignore */ '@libsql/client');
 
 // In SvelteKit, DATABASE_URL will be in process.env if using adapter-node or during dev.
 // For other environments, we ensure it's loaded from .env.
-const databaseUrl = process.env.DATABASE_URL;
-
-if (!databaseUrl) {
-    throw new Error('DATABASE_URL is not set in environment variables');
-}
+const databaseUrl = process.env.DATABASE_URL || 'file:local.db';
 
 const client = createClient({ url: databaseUrl });
 

@@ -35,11 +35,11 @@ export const HELP_DATA: Record<string, HelpGuide> = {
 		cost: 'VARIABLE'
 	},
 	'embeddings.google.key': {
-		title: 'Google GenAI API Key',
+		title: 'Google Gemini API Key',
 		description: 'Your API key from the Google AI Studio or Cloud Console.',
 		pros: ['Massive context window', 'High performance on semantic tasks'],
 		cons: ['Paid service', 'Data leaves your server'],
-		tip: 'Commonly used with the "text-embedding-004" model.',
+		tip: 'Commonly used with the \"text-embedding-004\" model.',
 		cost: 'VARIABLE'
 	},
 	'embeddings.ollama.url': {
@@ -122,10 +122,13 @@ export const HELP_DATA: Record<string, HelpGuide> = {
 		description: 'The Large Language Model (LLM) that generates answers based on retrieved document fragments.',
 		pros: [
 			'OLLAMA: Fully private, runs on your hardware.',
-			'OPENAI: Highest analytical capability and reasoning.'
+			'OPENAI: Highest analytical capability and reasoning.',
+			'GOOGLE: Large context window and balanced performance.'
 		],
-		cons: ['OPENAI: Data leaves the cluster for processing.'],
-		tip: 'You can use OpenAI for Chat while keeping Embeddings local for maximum cost efficiency.',
+		cons: [
+			'OPENAI/GOOGLE: Data leaves the cluster for processing.'
+		],
+		tip: 'You can use OpenAI/Google for Chat while keeping Embeddings local for maximum cost efficiency.',
 		cost: 'VARIABLE'
 	},
 	'chat.openai.key': {

@@ -1,10 +1,5 @@
 import { getSetting } from './registry';
-
-export interface DiscoveredModel {
-    id: string;
-    name: string;
-    type: 'CHAT' | 'EMBEDDING' | 'BOTH';
-}
+import type { DiscoveredModel } from '$lib/admin/models';
 
 /**
  * hRAG Model Discovery Service
@@ -52,10 +47,18 @@ export async function fetchGoogleModels(apiKey: string): Promise<DiscoveredModel
     const data = await res.json();
     return data.models.map((m: any) => {
         const id = m.name.replace('models/', '');
+        const isEmbedding = m.supportedGenerationMethods?.includes('embedContent') || id.includes('embed');
+        const isChat = m.supportedGenerationMethods?.includes('generateContent') || id.includes('gemini');
+        
+        let type: 'CHAT' | 'EMBEDDING' | 'BOTH' = 'CHAT';
+        if (isEmbedding && isChat) type = 'BOTH';
+        else if (isEmbedding) type = 'EMBEDDING';
+        else type = 'CHAT';
+        
         return {
             id,
             name: m.displayName || id,
-            type: m.supportedGenerationMethods.includes('embedContent') ? 'EMBEDDING' : 'CHAT'
+            type
         };
     });
 }

@@ -48,3 +48,23 @@
 2026-04-23 20:03:51: [+] Security chain established. Node is operational.
 2026-04-23 20:03:51: [+] Heartbeat monitoring active (60s interval).
 2026-04-23 20:03:51: ------------------------------------------------
+2026-04-24 15:20:42: ------------------------------------------------
+2026-04-24 15:20:42: hRAG CONTROL ROOM: SECURITY BOOTSTRAP
+2026-04-24 15:20:42: Node ID: Steves-MacBook-Pro.local-53123eb6
+2026-04-24 15:20:42: ------------------------------------------------
+2026-04-24 15:20:42: [-] Retrieving secure blob from Garage S3...
+2026-04-24 15:20:42: Listening on http://0.0.0.0:3000
+2026-04-24 15:20:43: [-] Decrypting JWT secret material...
+2026-04-24 15:20:43: [+] Security chain established. Node is operational.
+2026-04-24 15:20:43: [+] Heartbeat monitoring active (60s interval).
+2026-04-24 15:20:43: ------------------------------------------------
+2026-04-24 15:45:22: ------------------------------------------------
+2026-04-24 15:45:22: hRAG CONTROL ROOM: SECURITY BOOTSTRAP
+2026-04-24 15:45:22: Node ID: Steves-MacBook-Pro.local-c5428303
+2026-04-24 15:45:22: ------------------------------------------------
+2026-04-24 15:45:22: [-] Retrieving secure blob from Garage S3...
+2026-04-24 15:45:22: Listening on http://0.0.0.0:3000
+2026-04-24 15:45:22: [-] Decrypting JWT secret material...
+2026-04-24 15:45:22: [+] Security chain established. Node is operational.
+2026-04-24 15:45:22: [+] Heartbeat monitoring active (60s interval).
+2026-04-24 15:45:22: ------------------------------------------------

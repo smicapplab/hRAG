@@ -11,6 +11,7 @@
 	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 	import RegistryField from '$lib/components/admin/RegistryField.svelte';
 	import IntelligencePanel from '$lib/components/admin/IntelligencePanel.svelte';
+	import { filterRecommendedModels } from '$lib/admin/models';
 
 	let { data, form }: { data: PageData, form: ActionData } = $props();
 
@@ -18,6 +19,68 @@
 	let filterQuery = $state('');
 	let showNewKey = $state(false);
 	let activeHelpKey = $state<string | null>(null);
+	let showLegacyModels = $state(false);
+
+	// Local overrides for reactive UI updates before saving
+	let overrides = $state<Record<string, any>>({});
+	
+	// Merged settings: server data + local overrides
+	const settings = $derived.by(() => {
+		const base = { ...(data.settings || {}) };
+		for (const [key, value] of Object.entries(overrides)) {
+			if (value !== undefined) {
+				base[key] = value;
+			}
+		}
+		return base;
+	});
+
+	function handleSettingChange(key: string, value: any) {
+		overrides[key] = value;
+
+		// UX: If engine changes, reset model to prevent invalid config
+		if (key === 'chat.engine') {
+			overrides['chat.model'] = ''; 
+		}
+		if (key === 'embeddings.provider') {
+			overrides['embeddings.model'] = '';
+		}
+	}
+
+	function handleSettingSave(key: string) {
+		// Explicitly set to undefined to clear override and use data.settings
+		overrides[key] = undefined;
+	}
+
+	/**
+	 * Checks if a specific section has pending changes.
+	 */
+	function hasChanges(keys: string[]) {
+		return keys.some(k => overrides[k] !== undefined);
+	}
+
+	/**
+	 * Saves all pending changes for a section.
+	 */
+	async function saveSection(keys: string[]) {
+		const pending = keys.filter(k => overrides[k] !== undefined);
+		if (pending.length === 0) return;
+
+		for (const key of pending) {
+			const value = overrides[key];
+			const formData = new FormData();
+			formData.append('key', key);
+			formData.append('value', value);
+
+			await fetch('?/updateSetting', {
+				method: 'POST',
+				body: formData
+			});
+			handleSettingSave(key);
+		}
+		
+		// Optional: Trigger a full page invalidate if needed, but handled by handleSettingSave
+	}
 
 	const filteredPolicies = $derived(
 		(data?.policies || []).filter(p => 
@@ -399,9 +462,20 @@
 							
 							<!-- AI SERVICE GATEWAYS -->
 							<section class="space-y-6">
-								<div class="flex items-center gap-2 border-b border-border pb-2">
-									<Key size={14} class="text-signal-blue" />
-									<h3 class="font-bold tracking-widest text-foreground uppercase text-xs">AI Service Gateways (Credentials)</h3>
+								<div class="flex items-center justify-between border-b border-border pb-2">
+									<div class="flex items-center gap-2">
+										<Key size={14} class="text-signal-blue" />
+										<h3 class="font-bold tracking-widest text-foreground uppercase text-xs">AI Service Gateways (Credentials)</h3>
+									</div>
+									{#if hasChanges(['gateways.openai.key', 'gateways.google.key', 'gateways.ollama.url'])}
+										<button 
+											onclick={() => saveSection(['gateways.openai.key', 'gateways.google.key', 'gateways.ollama.url'])}
+											class="flex items-center gap-2 bg-signal-blue text-white px-3 py-1 rounded-sm text-[10px] font-bold uppercase tracking-widest hover:bg-signal-blue/80 transition-all shadow-lg shadow-signal-blue/20"
+											in:fade
+										>
+											<Save size={12} /> Commit Changes
+										</button>
+									{/if}
 								</div>
 
 								<div class="space-y-2">
@@ -410,35 +484,52 @@
 										label="OPENAI_API_KEY"
 										description="Private key for OpenAI services (GPT & Embeddings)."
 										type="password"
-										value={data.settings?.['gateways.openai.key'] || ''}
+										value={settings['gateways.openai.key'] || ''}
 										onFocus={(k) => activeHelpKey = k}
 										onBlur={() => activeHelpKey = null}
+										onChange={handleSettingChange}
+										onSave={handleSettingSave}
 									/>
 									<RegistryField 
 										key="gateways.google.key"
 										label="GOOGLE_API_KEY"
-										description="Secret key for Google GenAI services."
+										description="Secret key for Google Gemini services."
 										type="password"
-										value={data.settings?.['gateways.google.key'] || ''}
+										value={settings['gateways.google.key'] || ''}
 										onFocus={(k) => activeHelpKey = k}
 										onBlur={() => activeHelpKey = null}
+										onChange={handleSettingChange}
+										onSave={handleSettingSave}
 									/>
 									<RegistryField 
 										key="gateways.ollama.url"
 										label="OLLAMA_BASE_URL"
 										description="Network address for Ollama API."
-										value={data.settings?.['gateways.ollama.url'] || 'http://localhost:11434'}
+										value={settings['gateways.ollama.url'] || 'http://localhost:11434'}
 										onFocus={(k) => activeHelpKey = k}
 										onBlur={() => activeHelpKey = null}
+										onChange={handleSettingChange}
+										onSave={handleSettingSave}
 									/>
 								</div>
 							</section>
 
 							<!-- INFRASTRUCTURE SECTION -->
 							<section class="space-y-6">
-								<div class="flex items-center gap-2 border-b border-border pb-2">
-									<Cpu size={14} class="text-signal-blue" />
-									<h3 class="font-bold tracking-widest text-foreground uppercase text-xs">Semantic Embedding Engine</h3>
+								<div class="flex items-center justify-between border-b border-border pb-2">
+									<div class="flex items-center gap-2">
+										<Cpu size={14} class="text-signal-blue" />
+										<h3 class="font-bold tracking-widest text-foreground uppercase text-xs">Semantic Embedding Engine</h3>
+									</div>
+									{#if hasChanges(['embeddings.provider', 'embeddings.model'])}
+										<button 
+											onclick={() => saveSection(['embeddings.provider', 'embeddings.model'])}
+											class="flex items-center gap-2 bg-signal-blue text-white px-3 py-1 rounded-sm text-[10px] font-bold uppercase tracking-widest hover:bg-signal-blue/80 transition-all shadow-lg shadow-signal-blue/20"
+											in:fade
+										>
+											<Save size={12} /> Commit Changes
+										</button>
+									{/if}
 								</div>
 
 								<div class="space-y-2">
@@ -448,16 +539,18 @@
 										label="EMBEDDING_PROVIDER"
 										description="Core text-to-vector translation engine."
 										type="select"
-										value={data.settings?.['embeddings.provider'] || 'local'}
+										value={settings['embeddings.provider'] || 'local'}
 										options={[
 											{ value: 'local', label: 'LOCAL WASM (@xenova)' },
 											{ value: 'ollama', label: 'OLLAMA (Local API)' },
 											{ value: 'openai', label: 'OPENAI (Cloud)' },
-											{ value: 'google', label: 'GOOGLE GENAI (Cloud)' }
+											{ value: 'google', label: 'GOOGLE GEMINI (Cloud)' }
 										]}
-										syncAction={['openai', 'ollama', 'google'].includes(data.settings?.['embeddings.provider']) ? 'syncModels' : null}
+										syncAction={['openai', 'ollama', 'google'].includes(settings['embeddings.provider']) ? 'syncModels' : null}
 										onFocus={(k) => activeHelpKey = k}
 										onBlur={() => activeHelpKey = null}
+										onChange={handleSettingChange}
+										onSave={handleSettingSave}
 									/>
 
 									<!-- Dynamic Embedding Model -->
@@ -465,25 +558,40 @@
 										key="embeddings.model"
 										label="EMBEDDING_MODEL"
 										description="Specific embedding model artifact."
-										type="select"
-										value={data.settings?.['embeddings.model'] || ''}
+										type={settings['embeddings.provider'] === 'ollama' ? 'text' : 'select'}
+										value={settings['embeddings.model'] || ''}
 										options={[
-											...(data.settings?.[`gateways.${data.settings?.['embeddings.provider']}.models`] || [])
-												.filter((m: any) => m.type === 'EMBEDDING' || m.type === 'BOTH')
-												.map((m: any) => ({ value: m.id, label: m.name })),
-											{ value: data.settings?.['embeddings.model'], label: data.settings?.['embeddings.model'] }
-										].filter((v, i, a) => a.findIndex(t => t.value === v.value) === i)}
+											...filterRecommendedModels(
+												settings[`gateways.${settings['embeddings.provider']}.models`] || [], 
+												'EMBEDDING',
+												settings['embeddings.provider']
+											).map((m: any) => ({ value: m.id, label: m.name })),
+											{ value: settings['embeddings.model'], label: settings['embeddings.model'] }
+										].filter((v, i, a) => v.value && a.findIndex(t => t.value === v.value) === i)}
 										onFocus={(k) => activeHelpKey = k}
 										onBlur={() => activeHelpKey = null}
+										onChange={handleSettingChange}
+										onSave={handleSettingSave}
 									/>
 								</div>
 							</section>
 
 							<!-- INTELLIGENCE CHAT SECTION -->
 							<section class="space-y-6">
-								<div class="flex items-center gap-2 border-b border-border pb-2">
-									<Bot size={14} class="text-signal-blue" />
-									<h3 class="font-bold tracking-widest text-foreground uppercase text-xs">Intelligence Chat Orchestrator</h3>
+								<div class="flex items-center justify-between border-b border-border pb-2">
+									<div class="flex items-center gap-2">
+										<Bot size={14} class="text-signal-blue" />
+										<h3 class="font-bold tracking-widest text-foreground uppercase text-xs">Intelligence Chat Orchestrator</h3>
+									</div>
+									{#if hasChanges(['chat.engine', 'chat.model'])}
+										<button 
+											onclick={() => saveSection(['chat.engine', 'chat.model'])}
+											class="flex items-center gap-2 bg-signal-blue text-white px-3 py-1 rounded-sm text-[10px] font-bold uppercase tracking-widest hover:bg-signal-blue/80 transition-all shadow-lg shadow-signal-blue/20"
+											in:fade
+										>
+											<Save size={12} /> Commit Changes
+										</button>
+									{/if}
 								</div>
 
 								<div class="space-y-2">
@@ -493,14 +601,17 @@
 										label="CHAT_ENGINE"
 										description="Analytical LLM used for generating RAG responses."
 										type="select"
-										value={data.settings?.['chat.engine'] || 'OLLAMA'}
+										value={settings['chat.engine'] || 'OLLAMA'}
 										options={[
 											{ value: 'OLLAMA', label: 'OLLAMA (Local Intelligence)' },
-											{ value: 'OPENAI', label: 'OPENAI (Cloud Reasoning)' }
+											{ value: 'OPENAI', label: 'OPENAI (Cloud Reasoning)' },
+											{ value: 'GOOGLE', label: 'GOOGLE GEMINI (Intelligence)' }
 										]}
-										syncAction={data.settings?.['chat.engine'] === 'OPENAI' ? 'syncModels' : data.settings?.['chat.engine'] === 'OLLAMA' ? 'syncModels' : null}
+										syncAction={['OPENAI', 'OLLAMA', 'GOOGLE'].includes(settings['chat.engine']) ? 'syncModels' : null}
 										onFocus={(k) => activeHelpKey = k}
 										onBlur={() => activeHelpKey = null}
+										onChange={handleSettingChange}
+										onSave={handleSettingSave}
 									/>
 
 									<!-- Dynamic Chat Model -->
@@ -508,16 +619,20 @@
 										key="chat.model"
 										label="CHAT_MODEL"
 										description="Target model for chat dialogue."
-										type="select"
-										value={data.settings?.['chat.model'] || ''}
+										type={settings['chat.engine'] === 'OLLAMA' ? 'text' : 'select'}
+										value={settings['chat.model'] || ''}
 										options={[
-											...(data.settings?.[`gateways.${data.settings?.['chat.engine']?.toLowerCase()}.models`] || [])
-												.filter((m: any) => m.type === 'CHAT' || m.type === 'BOTH')
-												.map((m: any) => ({ value: m.id, label: m.name })),
-											{ value: data.settings?.['chat.model'], label: data.settings?.['chat.model'] }
-										].filter((v, i, a) => a.findIndex(t => t.value === v.value) === i)}
+											...filterRecommendedModels(
+												settings[`gateways.${settings['chat.engine']?.toLowerCase()}.models`] || [], 
+												'CHAT',
+												settings['chat.engine']?.toLowerCase()
+											).map((m: any) => ({ value: m.id, label: m.name })),
+											{ value: settings['chat.model'], label: settings['chat.model'] }
+										].filter((v, i, a) => v.value && a.findIndex(t => t.value === v.value) === i)}
 										onFocus={(k) => activeHelpKey = k}
 										onBlur={() => activeHelpKey = null}
+										onChange={handleSettingChange}
+										onSave={handleSettingSave}
 									/>
 								</div>
 							</section>
@@ -537,7 +652,7 @@
 										label="VECTOR_ENGINE"
 										description="Primary storage backend for semantic chunks."
 										type="select"
-										value={data.settings?.['vectors.engine'] || 'lancedb'}
+										value={settings['vectors.engine'] || 'lancedb'}
 										options={[
 											{ value: 'lancedb', label: 'LANCEDB (S3-Native)' },
 											{ value: 'pgvector', label: 'PGVECTOR (Enterprise)' },
@@ -545,38 +660,46 @@
 										]}
 										onFocus={(k) => activeHelpKey = k}
 										onBlur={() => activeHelpKey = null}
+										onChange={handleSettingChange}
+										onSave={handleSettingSave}
 									/>
 
-									{#if data.settings?.['vectors.engine'] === 'pgvector'}
+									{#if settings['vectors.engine'] === 'pgvector'}
 										<div class="ml-4 border-l-2 border-signal-blue/20 pl-4 space-y-2" transition:slide>
 											<RegistryField 
 												key="vectors.pg.url"
 												label="PG_CONNECTION_URL"
 												description="Postgres connection string (with pgvector)."
 												type="password"
-												value={data.settings?.['vectors.pg.url'] || ''}
+												value={settings['vectors.pg.url'] || ''}
 												onFocus={(k) => activeHelpKey = k}
 												onBlur={() => activeHelpKey = null}
+												onChange={handleSettingChange}
+												onSave={handleSettingSave}
 											/>
 										</div>
-									{:else if data.settings?.['vectors.engine'] === 'qdrant'}
+									{:else if settings['vectors.engine'] === 'qdrant'}
 										<div class="ml-4 border-l-2 border-signal-blue/20 pl-4 space-y-2" transition:slide>
 											<RegistryField 
 												key="vectors.qdrant.url"
 												label="QDRANT_API_ENDPOINT"
 												description="URL for the Qdrant service."
-												value={data.settings?.['vectors.qdrant.url'] || ''}
+												value={settings['vectors.qdrant.url'] || ''}
 												onFocus={(k) => activeHelpKey = k}
 												onBlur={() => activeHelpKey = null}
+												onChange={handleSettingChange}
+												onSave={handleSettingSave}
 											/>
 											<RegistryField 
 												key="vectors.qdrant.key"
 												label="QDRANT_API_KEY"
 												description="Secret key for Qdrant (if enabled)."
 												type="password"
-												value={data.settings?.['vectors.qdrant.key'] || ''}
+												value={settings['vectors.qdrant.key'] || ''}
 												onFocus={(k) => activeHelpKey = k}
 												onBlur={() => activeHelpKey = null}
+												onChange={handleSettingChange}
+												onSave={handleSettingSave}
 											/>
 										</div>
 									{/if}
@@ -596,9 +719,10 @@
 										label="INGESTION_MAX_SIZE (MB)"
 										description="Upper limit for individual artifact uploads."
 										type="number"
-										value={Math.round((data.settings?.['ingestion.max_file_size'] || 52428800) / (1024 * 1024))}
+										value={Math.round((settings['ingestion.max_file_size'] || 52428800) / (1024 * 1024))}
 										onFocus={(k) => activeHelpKey = k}
 										onBlur={() => activeHelpKey = null}
+										onChange={handleSettingChange}
 									/>
 									<div class="grid grid-cols-2 gap-4">
 										<RegistryField 
@@ -606,18 +730,20 @@
 											label="CHUNK_SIZE"
 											description="Tokens per semantic fragment."
 											type="number"
-											value={data.settings?.['ingestion.chunk_size'] || 512}
+											value={settings['ingestion.chunk_size'] || 512}
 											onFocus={(k) => activeHelpKey = k}
 											onBlur={() => activeHelpKey = null}
+											onChange={handleSettingChange}
 										/>
 										<RegistryField 
 											key="ingestion.chunk_overlap"
 											label="CHUNK_OVERLAP"
 											description="Context preservation window."
 											type="number"
-											value={data.settings?.['ingestion.chunk_overlap'] || 64}
+											value={settings['ingestion.chunk_overlap'] || 64}
 											onFocus={(k) => activeHelpKey = k}
 											onBlur={() => activeHelpKey = null}
+											onChange={handleSettingChange}
 										/>
 									</div>
 								</div>

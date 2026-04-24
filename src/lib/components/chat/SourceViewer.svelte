@@ -9,10 +9,15 @@
 
     onMount(async () => {
         try {
-            const res = await fetch(`/api/v1/documents/${docId}/fragments`);
+            const res = await fetch(`/api/v1/documents/${docId}/fragments?limit=100`);
             if (res.ok) {
                 const data = await res.json();
-                content = data.text;
+                // API returns { fragments: [{text, ...}], pagination: {...} }
+                if (data.fragments && Array.isArray(data.fragments)) {
+                    content = data.fragments.map((f: any) => f.text).join('\n\n');
+                } else {
+                    content = data.text || '';
+                }
             } else {
                 error = 'Failed to load source text';
             }

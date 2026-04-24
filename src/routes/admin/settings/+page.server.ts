@@ -5,17 +5,20 @@ import type { PageServerLoad, Actions } from './$types';
 import { fail } from '@sveltejs/kit';
 import crypto from 'node:crypto';
 import { fetchOpenAIModels, fetchOllamaModels, fetchGoogleModels, type DiscoveredModel } from '$lib/server/admin/discovery';
-import { getSetting } from '$lib/server/admin/registry';
+import { getSetting, setSetting, refreshCache, getAllSettings } from '$lib/server/admin/registry';
 
 export const load: PageServerLoad = async () => {
+    // Force refresh cache on load to ensure we see the latest updates from any node
+    await refreshCache(true);
+    
     const policies = await db.select().from(classificationPolicies);
-    const settings = await db.select().from(systemSettings);
     const quarantine = await db.select().from(documents).where(eq(documents.reviewStatus, 'PENDING'));
     const keys = await db.select().from(apiKeys);
+    const settings = await getAllSettings();
     
     return {
         policies,
-        settings: settings.reduce((acc, s) => ({ ...acc, [s.key]: JSON.parse(s.value) }), {} as Record<string, any>),
+        settings,
         quarantine,
         apiKeys: keys
     };
@@ -55,17 +58,11 @@ export const actions: Actions = {
             value = value.split(',').map((s: string) => s.trim().toLowerCase());
         }
 
-        await db.insert(systemSettings)
-            .values({ 
-                key, 
-                value: JSON.stringify(value), 
-                updatedBy: locals.user.id,
-                updatedAt: new Date()
-            })
-            .onConflictDoUpdate({
-                target: systemSettings.key,
-                set: { value: JSON.stringify(value), updatedBy: locals.user.id, updatedAt: new Date() }
-            });
+        // Use the centralized setSetting which handles DB and local cache update
+        await setSetting(key, value, locals.user.id);
+        
+        // Immediately refresh cache to ensure next load gets this change
+        await refreshCache(true);
         
         return { success: true };
     },

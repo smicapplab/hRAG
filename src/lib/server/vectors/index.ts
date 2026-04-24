@@ -77,9 +77,18 @@ export async function getVectorStore(): Promise<VectorStore> {
 
     initializationPromise = (async () => {
         const { getSetting } = await import('../admin/registry');
-        const { env } = await import('$env/dynamic/private');
         
-        const provider = (await getSetting('vectors.engine', env.VECTOR_STORE_TYPE || 'lancedb')).toLowerCase();
+        let envType = 'lancedb';
+        try {
+            const { env } = await import('$env/dynamic/private');
+            envType = env.VECTOR_STORE_TYPE || 'lancedb';
+        } catch {
+            if (typeof process !== 'undefined' && process.env.VECTOR_STORE_TYPE) {
+                envType = process.env.VECTOR_STORE_TYPE;
+            }
+        }
+        
+        const provider = (await getSetting('vectors.engine', envType)).toLowerCase();
 
         let instance: VectorStore;
         if (provider === 'lancedb') {

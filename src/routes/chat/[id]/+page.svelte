@@ -10,6 +10,7 @@
     role: 'user' | 'assistant';
     content: string;
     evidence?: any[];
+    modelName?: string;
     createdAt: Date;
   }
 
@@ -64,14 +65,31 @@
           role: 'assistant', 
           content: result.content, 
           evidence: result.evidence,
+          modelName: result.modelName,
           createdAt: new Date(),
           sessionId: page.params.id
         };
         messages = [...messages, assistantMsg];
-      } else {
+
+        // Refresh sidebar if title was auto-generated
+        if (result.newTitle) {
+            await invalidateAll();
+        }
+      } else if (res.status === 401) {
         const errorMsg: ChatMessage = { 
           role: 'assistant', 
-          content: 'Error: Intelligence gateway timeout or access denied.', 
+          content: 'Session Expired: Please log in again to continue authorized research.', 
+          createdAt: new Date(),
+          sessionId: page.params.id
+        };
+        messages = [...messages, errorMsg];
+        // Optional: wait a bit and redirect
+        setTimeout(() => window.location.href = '/login', 3000);
+      } else {
+        const result = await res.json().catch(() => ({}));
+        const errorMsg: ChatMessage = { 
+          role: 'assistant', 
+          content: `Error: ${result.error || 'Intelligence gateway timeout or access denied.'}`, 
           createdAt: new Date(),
           sessionId: page.params.id
         };
@@ -130,6 +148,13 @@
               {msg.content}
             </div>
 
+            {#if msg.role === 'assistant' && msg.modelName}
+              <div class="flex items-center gap-1.5 opacity-40">
+                <div class="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse"></div>
+                <span class="text-[9px] font-mono uppercase tracking-tighter">Inquiry processed by {msg.modelName}</span>
+              </div>
+            {/if}
+
             {#if msg.evidence && msg.evidence.length > 0}
               <div class="space-y-3">
                 <h4 class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
@@ -181,7 +206,7 @@
           onkeydown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
           rows="1" 
           placeholder="Query the Intelligence Vault..." 
-          class="w-full bg-muted/40 border border-border rounded-sm p-4 pr-14 text-sm text-foreground outline-none focus:border-signal-blue focus:bg-muted/60 transition-all font-mono uppercase tracking-wider resize-none"
+          class="w-full bg-muted/40 border border-border rounded-sm p-4 pr-14 text-sm text-foreground outline-none focus:border-signal-blue focus:bg-muted/60 transition-all resize-none"
         ></textarea>
         <button 
           type="submit"

@@ -8,3 +8,7 @@
 2026-04-23 19:51:10: (Use `node --trace-deprecation ...` to show where the warning was created)
 2026-04-23 20:03:51: (node:18346) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
 2026-04-23 20:03:51: (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-04-24 15:20:42: (node:44932) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-04-24 15:20:42: (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-04-24 15:45:22: (node:53665) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-04-24 15:45:22: (Use `node --trace-deprecation ...` to show where the warning was created)

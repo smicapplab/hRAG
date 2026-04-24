@@ -115,6 +115,18 @@ To maintain statelessness and handle large binaries efficiently:
 3.  API generates an **authenticated S3 Pre-signed URL** with a **60-second TTL**.
 4.  The browser retrieves the file directly from Garage S3.
 
+### 3.4 The Intelligence Chat Path (Context-Anchored)
+hRAG provides a strictly anchored RAG chat experience:
+1.  **Session Loading:** Retrieve chat history for the active `sessionId`, filtered by the current `user_id`.
+2.  **RAG Augmentation:** 
+    *   Perform a vector search using the "Iron-Clad" search path (Section 3.2).
+    *   Retrieve the top-N authorized fragments.
+3.  **LLM Orchestration:**
+    *   Construct a prompt containing ONLY the authorized fragments and the sliding-window history.
+    *   Invoke the selected LLM provider (Ollama, OpenAI, etc.).
+4.  **Gap Analysis:** If no authorized fragments match the query, the system is instructed to report a "Gap Analysis" rather than hallucinating.
+5.  **Persistence:** Store the assistant's response and the evidence (fragment IDs) in the `chat_messages` table for future reference.
+
 ---
 
 ## 4. State Recovery & Node Initialization

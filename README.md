@@ -112,18 +112,28 @@ If you opted to seed demo data during installation, use these identities to test
 ## Development Milestones
 The following milestones are planned for implementation. Tracks such as Frontend Foundation and Vector Abstraction can proceed in parallel once the SvelteKit project is initialized.
 
-* [x] **Security & Compliance Guide:** Formalize "Iron-Clad" mandates and trade-offs. (Completed)
-* [x] **Node Automation Scripts:** Implement `install.sh`, `run.sh`, `dev.sh`, and `reset-db.sh`. (Completed)
-* [ ] **SvelteKit Setup:** Initialization of the project with Tailwind and shadcn-svelte.
-* [x] **Data Seeding:** Implementation of essential and demo seeds for multi-tenant verification. (Completed)
-* [x] **Frontend Foundation:** Establishing the "Control Room" design system with reactive components. (Completed)
-* [ ] **JWT Secret Management:** AES-GCM encryption and S3-based secret recovery.
-* [ ] **Vector Abstraction:** Definition of the VectorStore interface and LanceDB/S3 provider.
-* [ ] **SQLite/Litestream Integration:** Automation of the state recovery and replication bridge.
-* [ ] **Ingestion Pipeline:** Pure Node.js extraction, WASM OCR, and async task queue.
-* [ ] **External Metadata Sync API:** REST endpoints for external agents to push metadata.
-* [ ] **Audit Log Ingestion API:** Centralized reporting for external sidecars.
-* [ ] **Health Endpoint:** Monitor Garage, LanceDB, and Litestream lag.
-* [ ] **Nginx Templating:** Automated generation of infrastructure configurations.
-* [ ] **Upgrade Strategy:** Command-line management of migrations and versioning.
-* [ ] **The Bridge:** Finalization of the installation and scale-out automation.
+- [x] **SvelteKit Setup:** Initialize SvelteKit project with Tailwind and shadcn-svelte. (Completed)
+- [x] **Security & Compliance Guide:** Formalize "Iron-Clad" mandates and trade-offs. (Completed)
+- [x] **Node Automation Scripts:** Implement `install.sh`, `run.sh`, `dev.sh`, and `reset-db.sh`. (Completed)
+- [x] **Data Seeding:** Implement `db:seed:essential` (roles/super-user/policies) and `db:seed:demo` (multi-tenant sample data). (Completed)
+- [x] **Frontend Foundation:** Implement "Control Room" design system components. (Completed)
+- [x] **JWT Secret Management:** Implement AES-GCM encryption and S3 storage/recovery logic. (Completed)
+- [x] **Admin & Settings Control Plane (Phase 1):** Hierarchy Groups and Per-Group Roles. (Completed)
+- [x] **Admin & Settings Control Plane (Phase 2):** Stateless Registry, Fleet Health (Heartbeats), and Audit Vault. (Completed)
+- [x] **Vector Abstraction:** Define `VectorStore` interface and LanceDB/S3 provider. (Completed)
+- [x] **Ingestion Pipeline:** Pure Node extraction (WASM OCR), queue (Worker Threads), and auto-classification. (Completed)
+- [x] **Health Endpoint:** Monitor Garage, LanceDB, and DB connection. (Completed)
+- [x] **The Bridge:** Finalize `install.sh` with configuration prompts for the master passphrase. (Completed)
+- [x] **Content Discovery & Tagging (Phase 1):** Multi-label schema, AI-suggested tags, and search filters. (Completed)
+- [x] **Content Discovery & Tagging (Phase 2):** Document Detail View and manual tag management. (Completed)
+- [x] **Content Discovery & Tagging (Phase 3):** Semantic matching, privacy leakage fixes, and discovery sidebar. (Completed)
+- [x] **Managed Taxonomy:** Governed tag creation (Admins/Managers only) and canonical seeding. (Completed)
+- [x] **Advanced Taxonomy Governance:** Tag promotion (AI -> Canonical) and atomic merging logic. (Completed)
+- [x] **Admin Taxonomy Registry:** Global management interface for merging and promoting taxonomy labels. (Completed)
+- [x] **External Metadata Sync API:** REST endpoints for the "Power User Sidecar" to push document metadata. (Completed)
+- [x] **Audit Log Ingestion API:** REST endpoints for external agents to report activities. (Completed)
+- [x] **SQLite/Litestream Integration:** Automate Litestream sidecar and restore logic with `litestream.yml`. (Completed)
+- [x] **Single-Node Warning:** Add a UI banner/alert for non-replicated storage (Single-node Garage). (Completed)
+- [x] **Nginx Config Templating:** Automate SSL and upstream blocks for multi-node clusters. (Completed)
+- [x] **Upgrade Strategy:** Implement `hrag update` with Drizzle migrations and binary swaps. (Completed)
+- [x] **Intelligence Chat:** Implement document-anchored RAG chat with split-pane UI and history. (Completed)

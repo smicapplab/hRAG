@@ -2,10 +2,22 @@ import { OllamaEmbeddings } from '@langchain/ollama';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { GoogleGenerativeAIEmbeddings } from '@langchain/google-genai';
 import { HuggingFaceTransformersEmbeddings } from '@langchain/community/embeddings/huggingface_transformers';
-import { env } from '$env/dynamic/private';
 import type { Embeddings } from '@langchain/core/embeddings';
-
 import { getSetting } from '../admin/registry';
+
+// Safety helper for script execution outside of SvelteKit
+async function getEnvValue(key: string, defaultValue: string): Promise<string> {
+    if (typeof process !== 'undefined' && process.env[key]) {
+        return process.env[key]!;
+    }
+    try {
+        // Dynamic import to avoid build-time errors in non-SvelteKit environments
+        const { env } = await import('$env/dynamic/private');
+        return (env as any)[key] || defaultValue;
+    } catch {
+        return defaultValue;
+    }
+}
 
 let providerInstance: Embeddings | null = null;
 let currentConfigHash: string | null = null;
@@ -15,7 +27,7 @@ let currentConfigHash: string | null = null;
  * Provides a singleton embedding provider with config-based cache invalidation.
  */
 export async function getEmbeddingProvider(): Promise<Embeddings> {
-    const provider = await getSetting('embeddings.provider', env.EMBEDDING_PROVIDER || 'local');
+    const provider = await getSetting('embeddings.provider', await getEnvValue('EMBEDDING_PROVIDER', 'local'));
     const config: Record<string, string | undefined> = { provider: provider.toLowerCase() };
 
     // 1. Resolve Provider-Specific Config
